@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 import os
 
 from routers import monitor, auth, tags, cert, info, uptime, ping, database, settings as settings, user
@@ -45,6 +46,6 @@ async def startup_event():
 async def shutdown_event():
     await Tortoise.close_connections()
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
-    return {"Foo": "Bar"}
+    return RedirectResponse(url='/docs')

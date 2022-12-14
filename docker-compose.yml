@@ -11,18 +11,19 @@ services:
 
   api:
     container_name: backend
-    build: .
+    image: medaziz11/uptimekuma_restapi
     volumes:
       - ./db:/db
     restart: always
     environment:
-      - PORT=8080
       - KUMA_SERVER=http://kuma:3001
       - KUMA_USERNAME=test
       - KUMA_PASSWORD=123test.
       - ADMIN_PASSWORD=admin
     depends_on:
       - kuma
+    ports:
+      - "8000:8000"
 
 volumes:
   uptime-kuma:
