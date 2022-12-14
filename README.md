@@ -31,7 +31,7 @@
   - Multi user Kuma api ( without privilege YET!!) with a small SQLite db
   - Easy to use REST API with most of the Uptime-Kuma features
   - Swagger Docs
-  - Dockerized [UptimeKuma_RestAPI Container](https://hub.docker.com/repository/docker/medaziz11/uptimekuma_restapi)
+  - Dockerized [UptimeKuma_RestAPI Image](https://hub.docker.com/repository/docker/medaziz11/uptimekuma_restapi)
 
 ### Example : 
   You can simply create a docker compose file like this :
