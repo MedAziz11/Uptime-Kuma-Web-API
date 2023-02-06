@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Path
 from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
 
-from schemas.monitor import Monitor, MonitorUpdate
+from schemas.monitor import Monitor, MonitorUpdate, MonitorTag
 from schemas.api import API
 from utils.deps import get_current_user
 from config import logger as logging
 
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
-@router.get("/", description="Get all Monitors")
+@router.get("", description="Get all Monitors")
 async def get_monitors(cur_user: API = Depends(get_current_user)):
     api: UptimeKumaApi = cur_user['api']
     try :
@@ -37,7 +37,7 @@ async def get_monitor(monitor_id:int=Path(...) , cur_user: API = Depends(get_cur
     raise HTTPException(404, {"message": "Monitor not found !"})
 
 
-@router.post("/", description="Create a Monitor")
+@router.post("", description="Create a Monitor")
 async def create_monitor(monitor: Monitor,cur_user: API = Depends(get_current_user)):
     api: UptimeKumaApi = cur_user['api']
     try:
@@ -137,3 +137,40 @@ async def monitor_beats(monitor_id:int=Path(...), hours:float=1 , cur_user: API 
 
 # to be implemented 
 # api.get_monitor_tags   api.edit_monitor_tags api.delete_monitor_tags
+
+
+@router.post("/{monitor_id}/tag", description="Add an already created tag to a specific monitor")
+async def add_monitor_tag(tag: MonitorTag ,monitor_id:int=Path(...),  cur_user: API = Depends(get_current_user)):
+    api: UptimeKumaApi = cur_user['api']
+    if monitor_id :
+        try:
+            msg = api.add_monitor_tag(monitor_id=monitor_id, **tag.dict())
+        except UptimeKumaException as e:
+            logging.info(e)
+            raise HTTPException(404, {"message": "Monitor or Tag not found !"})
+        except Exception as e :
+            logging.fatal(e)
+            raise HTTPException(500, str(e))
+
+
+        return msg
+    
+    raise HTTPException(404, {"message": "Monitor not found !"})
+
+@router.delete("/{monitor_id}/tag", description="Delete a tag from a specific monitor")
+async def delete_monitor_tag(tag: MonitorTag ,monitor_id:int=Path(...),  cur_user: API = Depends(get_current_user)):
+    api: UptimeKumaApi = cur_user['api']
+    if monitor_id :
+        try:
+            msg = api.delete_monitor_tag(monitor_id=monitor_id, **tag.dict())
+        except UptimeKumaException as e:
+            logging.info(e)
+            raise HTTPException(404, {"message": "Monitor or Tag not found !"})
+        except Exception as e :
+            logging.fatal(e)
+            raise HTTPException(500, str(e))
+
+
+        return msg
+    
+    raise HTTPException(404, {"message": "Monitor not found !"})

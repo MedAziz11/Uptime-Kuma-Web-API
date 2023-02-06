@@ -13,10 +13,10 @@ from utils.deps import authenticate
 from config import logger as logging, settings
 
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
-@router.post("/access-token/", response_model = JWToken)
+@router.post("/access-token", response_model = JWToken)
 async def login_access_token(form_data : OAuth2PasswordRequestForm = Depends()):
     user_obj = await Users.get_or_none(username=form_data.username)
     user = authenticate(user_obj, form_data.password)
@@ -28,7 +28,7 @@ async def login_access_token(form_data : OAuth2PasswordRequestForm = Depends()):
         user.last_visit = datetime.now()
         await user.save(update_fields=["last_visit"])
 
-        logging.fatal(f"hellooooooooooooo  {settings.KUMA_SERVER}")
+        logging.fatal(f"hello from {settings.KUMA_SERVER}")
         api = UptimeKumaApi(settings.KUMA_SERVER)
         resp = api.login(settings.KUMA_USERNAME, settings.KUMA_PASSWORD)
 

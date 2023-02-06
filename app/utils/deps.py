@@ -31,6 +31,13 @@ async def get_current_user(token: str = Depends(oauth2_token)):
             status_code=403,
             detail="invalid credentials"
         )
+        
+    except jwt.exceptions.ExpiredSignatureError as e:
+        logging.info(e)
+        raise HTTPException(
+            status_code=403,
+            detail="Token expired !!"
+        )
     try :
     
         api = UptimeKumaApi(settings.KUMA_SERVER)

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.encoders import jsonable_encoder
 from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
 
 from config import logger as logging
@@ -7,7 +6,7 @@ from schemas.api import API
 from schemas.settings import Backup,  ImportHandleType
 from utils.deps import get_current_user
  
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post("/upload_backup", description="Upload a Backup")

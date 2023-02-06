@@ -11,9 +11,9 @@ from config import logger as logging
 
 
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
-@router.post("/", description="Add a tag by name and color")
+@router.post("", description="Add a tag by name and color")
 async def add_tags(tag:Tag, cur_user: API = Depends(get_current_user)):
     api: UptimeKumaApi = cur_user['api']
     try:
@@ -27,7 +27,7 @@ async def add_tags(tag:Tag, cur_user: API = Depends(get_current_user)):
 
     return resp
 
-@router.get("/", description="Get all tags")
+@router.get("", description="Get all tags")
 async def get_tags(cur_user: API = Depends(get_current_user))-> Dict[str, List[Dict]]:
     api: UptimeKumaApi = cur_user['api']
     try :

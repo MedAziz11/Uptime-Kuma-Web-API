@@ -5,10 +5,10 @@ from config import logger as logging
 from schemas.api import API
 from utils.deps import get_current_user
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
-@router.get("/", description="Get Certification Info")
+@router.get("", description="Get Certification Info")
 async def get_cert_info(cur_user: API = Depends(get_current_user)):
     api : UptimeKumaApi = cur_user['api']
     try:

@@ -71,3 +71,9 @@ class Monitor(BaseModel):
 class MonitorUpdate(Monitor):
     type: Optional[MonitorType]= None
     name: Optional[str] = None
+
+class MonitorTag(BaseModel):
+    tag_id: int
+    value: Optional[str] = ""
+
+    

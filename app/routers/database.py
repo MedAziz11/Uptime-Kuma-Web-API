@@ -5,7 +5,7 @@ from config import logger as logging
 from schemas.api import API
 from utils.deps import get_current_user
  
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.get("/size", description="Get DataBase Size")

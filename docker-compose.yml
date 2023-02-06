@@ -2,7 +2,7 @@ version: '3.9'
 services:
   kuma:
     container_name: uptime-kuma
-    image: louislam/uptime-kuma:latest
+    image: louislam/uptime-kuma:1.19.6
     ports:
       - "3001:3001"
     restart: always
@@ -20,6 +20,7 @@ services:
       - KUMA_USERNAME=test
       - KUMA_PASSWORD=123test.
       - ADMIN_PASSWORD=admin
+      - ACCESS_TOKEN_EXPIRATION=1 #1minute
     depends_on:
       - kuma
     ports:

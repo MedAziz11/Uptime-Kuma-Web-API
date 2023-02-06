@@ -10,9 +10,9 @@ from schemas.user import RegisterUser
 from utils.security import hash_password
 
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
-@router.post('/', response_model = UserResponse)
+@router.post('', response_model = UserResponse)
 async def create_user(user_in: RegisterUser)-> Any:
     """ Sign up """
     user = await Users.get_or_none(username=user_in.username)
@@ -26,7 +26,7 @@ async def create_user(user_in: RegisterUser)-> Any:
     return await UserResponse.from_tortoise_orm(user)
 
 
-@router.get("/", response_model=List[UserResponse])
+@router.get("", response_model=List[UserResponse])
 async def get_users(cur_user: API = Depends(get_current_user)):
     return await UserResponse.from_queryset(Users.all())
 
