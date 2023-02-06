@@ -16,7 +16,7 @@ from config import logger as logging, settings
 router = APIRouter(redirect_slashes=True)
 
 
-@router.post("/access-token", response_model = JWToken)
+@router.post("/access-token")
 async def login_access_token(form_data : OAuth2PasswordRequestForm = Depends()):
     user_obj = await Users.get_or_none(username=form_data.username)
     user = authenticate(user_obj, form_data.password)
@@ -28,14 +28,9 @@ async def login_access_token(form_data : OAuth2PasswordRequestForm = Depends()):
         user.last_visit = datetime.now()
         await user.save(update_fields=["last_visit"])
 
-        logging.fatal(f"hello from {settings.KUMA_SERVER}")
-        api = UptimeKumaApi(settings.KUMA_SERVER)
-        resp = api.login(settings.KUMA_USERNAME, settings.KUMA_PASSWORD)
-
-        logging.info("Logged in to UptimeKuma")
 
         access_token_expires = timedelta(minutes = settings.ACCESS_TOKEN_EXPIRE)
-        response = {"access_token":create_access_token(resp["token"], access_token_expires),"token_type": "bearer"}
+        response = {"access_token":create_access_token("token", access_token_expires),"token_type": "bearer"}
 
     except UptimeKumaException as e :
         logging.info(e)

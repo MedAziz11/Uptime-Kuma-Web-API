@@ -11,7 +11,8 @@ services:
 
   api:
     container_name: backend
-    image: medaziz11/uptimekuma_restapi
+    # image: medaziz11/uptimekuma_restapi
+    build: .
     volumes:
       - ./db:/db
     restart: always
