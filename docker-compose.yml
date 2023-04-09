@@ -9,18 +9,16 @@ services:
     volumes:
       - uptime-kuma:/app/data
   api:
-    # container_name: backend
-    # network_mode: host
     build: .
     volumes:
       - ./db:/db
     restart: always
     environment:
-      - KUMA_SERVER=${KUMA_SERVER}
-      - KUMA_USERNAME=${KUMA_USERNAME}
-      - KUMA_PASSWORD=${KUMA_PASSWORD}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - ACCESS_TOKEN_EXPIRATION=${ACCESS_TOKEN_EXPIRATION}
+      - KUMA_SERVER=${KUMA_SERVER:-http://kuma:3001}
+      - KUMA_USERNAME=${KUMA_USERNAME:-admin}
+      - KUMA_PASSWORD=${KUMA_PASSWORD:-passwordSafe1*}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - ACCESS_TOKEN_EXPIRATION=${ACCESS_TOKEN_EXPIRATION:-1}
     ports:
       - "8000:8000"
 
