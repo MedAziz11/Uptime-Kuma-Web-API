@@ -32,7 +32,7 @@ async def get_status_page(slug: str, cur_user: API = Depends(get_current_user)):
 
 from fastapi import Query
 
-@router.post("/{slug}", response_model=AddStatusPageResponse, description="Add a status page")
+@router.post("", response_model=AddStatusPageResponse, description="Add a status page")
 async def add_status_page(
     slug: str = Query(...),
     title: str = Query(...),
