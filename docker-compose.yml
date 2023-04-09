@@ -1,5 +1,13 @@
 version: "3.9"
 services:
+  kuma:
+    container_name: uptime-kuma
+    image: louislam/uptime-kuma:1.19.6
+    ports:
+      - "3001:3001"
+    restart: always
+    volumes:
+      - uptime-kuma:/app/data
   api:
     # container_name: backend
     # network_mode: host
