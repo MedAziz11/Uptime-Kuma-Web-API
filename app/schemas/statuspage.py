@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, HttpUrl, constr
 
 class Incident(BaseModel):
     content: str
@@ -23,9 +23,9 @@ class PublicGroup(BaseModel):
     weight: int
 
 class StatusPage(BaseModel):
-    customCSS: Optional[str] = None  # Make customCSS field optional
+    customCSS: Optional[str] = None
     description: Optional[str]
-    domainNameList: List
+    domainNameList: List[HttpUrl]
     footerText: Optional[str]
     googleAnalyticsId: Optional[str]
     icon: str
@@ -35,7 +35,7 @@ class StatusPage(BaseModel):
     published: bool
     showPoweredBy: bool
     showTags: bool
-    slug: str
+    slug: constr(min_length=1)
     theme: str
     title: str
     publicGroupList: Optional[List[PublicGroup]]
@@ -43,21 +43,31 @@ class StatusPage(BaseModel):
 class StatusPageList(BaseModel):
     statuspages: List[StatusPage]
 
+class AddStatusPageRequest(BaseModel):
+    slug: Optional[str] = None
+    title:  Optional[str] = None
+    msg:  Optional[str] = None
 
 class AddStatusPageResponse(BaseModel):
-    msg: str
-
+    msg:  Optional[str] = None
 class SaveStatusPageRequest(BaseModel):
     id: int
     title: str
+    slug: constr(min_length=1)
     description: Optional[str] = None
     theme: Optional[str] = "light"
     published: Optional[bool] = True
     showTags: Optional[bool] = False
-    domainNameList: Optional[List[str]] = None
+    domainNameList: Optional[List[HttpUrl]] = None
     googleAnalyticsId: Optional[str] = None
     customCSS: Optional[str] = ""
     footerText: Optional[str] = None
     showPoweredBy: Optional[bool] = True
     icon: Optional[str] = "/icon.svg"
     publicGroupList: Optional[List] = None
+
+class SaveStatusPageResponse(BaseModel):
+    detail: str
+
+class DeleteStatusPageResponse(BaseModel):
+    detail: str = "Status page deleted"
