@@ -1,28 +1,18 @@
-version: '3.9'
+version: "3.9"
 services:
-  kuma:
-    container_name: uptime-kuma
-    image: louislam/uptime-kuma:1.19.6
-    ports:
-      - "3001:3001"
-    restart: always
-    volumes:
-      - uptime-kuma:/app/data
-
   api:
-    container_name: backend
-    image: medaziz11/uptimekuma_restapi
+    # container_name: backend
+    # network_mode: host
+    build: .
     volumes:
       - ./db:/db
     restart: always
     environment:
-      - KUMA_SERVER=http://kuma:3001
-      - KUMA_USERNAME=test
-      - KUMA_PASSWORD=123test.
-      - ADMIN_PASSWORD=admin
-      - ACCESS_TOKEN_EXPIRATION=1 #1minute
-    depends_on:
-      - kuma
+      - KUMA_SERVER=${KUMA_SERVER}
+      - KUMA_USERNAME=${KUMA_USERNAME}
+      - KUMA_PASSWORD=${KUMA_PASSWORD}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - ACCESS_TOKEN_EXPIRATION=${ACCESS_TOKEN_EXPIRATION}
     ports:
       - "8000:8000"
 
