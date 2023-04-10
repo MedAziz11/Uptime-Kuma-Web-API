@@ -1,0 +1,455 @@
+diff --git a/app/main.py b/app/main.py
+index 6e911f0..623d09d 100644
+--- a/app/main.py
++++ b/app/main.py
+@@ -1,18 +1,19 @@
++# main.py
+ from fastapi import FastAPI
+ from fastapi.responses import RedirectResponse
+-import os
+-from routers import statuspage
+-from routers import monitor, auth, tags, cert, info, uptime, ping, database, settings as settings, user, maintenance
+-from config import settings as app_settings
+-from utils.admin import check_admin
+ 
+-from tortoise import Tortoise
++from routers import (
++    statuspage, monitor, auth, tags, cert, info, uptime,
++    ping, database, settings as settings_router, user, maintenance
++)
++from config import settings as app_settings
++from app_setup import initialize_app
+ 
+ app = FastAPI(title=app_settings.PROJECT_NAME)
+ app.router.redirect_slashes = True
+ 
+ app.include_router(user.router, prefix="/users", tags=["Users"])
+-app.include_router(settings.router, prefix="/settings", tags=["Settings"])
++app.include_router(settings_router.router, prefix="/settings", tags=["Settings"])
+ app.include_router(database.router, prefix="/database", tags=["DataBase"])
+ app.include_router(monitor.router, prefix="/monitors", tags=["Monitor"])
+ app.include_router(statuspage.router, prefix="/statuspages", tags=["Status Page"])
+@@ -26,21 +27,7 @@ app.include_router(auth.router, prefix="/login", tags=["Authentication"])
+ 
+ @app.on_event("startup")
+ async def startup_event():
+-    if not os.path.exists("../db"):
+-        os.makedirs("../db")
+-
+-    await Tortoise.init(
+-        db_url="sqlite://../db/test.sqlite3",
+-        modules={"models": ["models.user"]}
+-    )
+-
+-    await Tortoise.generate_schemas()
+-
+-    await check_admin()
+-
+-@app.on_event("shutdown")
+-async def shutdown_event():
+-    await Tortoise.close_connections()
++    await initialize_app(app)
+ 
+ @app.get("/", include_in_schema=False)
+ async def root():
+diff --git a/app/routers/statuspage.py b/app/routers/statuspage.py
+index c393c67..3b40ffc 100644
+--- a/app/routers/statuspage.py
++++ b/app/routers/statuspage.py
+@@ -1,59 +1,62 @@
+-from fastapi import APIRouter, Depends, HTTPException, Path, Body
++from fastapi import APIRouter, Depends, Path, Body
+ from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
+ from config import logger as logging
+ from schemas.api import API
+ from utils.deps import get_current_user
+-from schemas.statuspage import StatusPageList, StatusPage, AddStatusPageResponse, AddStatusPageRequest,SaveStatusPageRequest,SaveStatusPageResponse, DeleteStatusPageResponse
++from utils.exceptions import handle_api_exceptions
++from schemas.statuspage import (
++    StatusPageList,
++    StatusPage,
++    AddStatusPageResponse,
++    AddStatusPageRequest,
++    SaveStatusPageRequest,
++    SaveStatusPageResponse,
++    DeleteStatusPageResponse,
++)
++import json
+ 
+ router = APIRouter(redirect_slashes=True)
+ 
+ 
+ @router.get("", response_model=StatusPageList, description="Get all status pages")
+ async def get_all_status_pages(cur_user: API = Depends(get_current_user)):
+-    api: UptimeKumaApi = cur_user['api']
+-    try:
+-        return {"statuspages": api.get_status_pages()}
+-    except Exception as e:
+-        logging.fatal(e)
+-        raise HTTPException(500, str(e))
++    api: UptimeKumaApi = cur_user["api"]
++    return {"statuspages": await handle_api_exceptions(api.get_status_pages)}
+ 
+ 
+ @router.get("/{slug}", response_model=StatusPage, description="Get a status page")
+ async def get_status_page(slug: str, cur_user: API = Depends(get_current_user)):
+-    api: UptimeKumaApi = cur_user['api']
+-    try:
+-        return api.get_status_page(slug)
+-    except UptimeKumaException as e:
+-        logging.error(e)
+-        raise HTTPException(404, str(e))
+-    except Exception as e:
+-        logging.fatal(e)
+-        raise HTTPException(500, str(e))
++    api: UptimeKumaApi = cur_user["api"]
++    return await handle_api_exceptions(api.get_status_page, slug)
+ 
+ 
+ @router.post("", response_model=AddStatusPageResponse, description="Add a status page")
+-async def add_status_page(status_page_data: AddStatusPageRequest, cur_user: API = Depends(get_current_user)):
+-    api: UptimeKumaApi = cur_user['api']
+-    try:
+-        return api.add_status_page(status_page_data.slug, status_page_data.title)
+-    except UptimeKumaException as e:
+-        logging.error(e)
+-        raise HTTPException(400, str(e))
+-    except Exception as e:
+-        logging.fatal(e)
+-        raise HTTPException(500, str(e))
++async def add_status_page(
++    status_page_data: AddStatusPageRequest, cur_user: API = Depends(get_current_user)
++):
++    api: UptimeKumaApi = cur_user["api"]
++    return await handle_api_exceptions(
++        api.add_status_page, status_page_data.slug, status_page_data.title
++    )
+ 
+ 
+-@router.post("/{slug}",response_model=SaveStatusPageResponse, description="Save a status page")
++@router.post(
++    "/{slug}", response_model=SaveStatusPageResponse, description="Save a status page"
++)
+ async def save_status_page(
+     slug: str = Path(...),
+     status_page_data: SaveStatusPageRequest = Body(...),
+     cur_user: API = Depends(get_current_user),
+-):  
+-    api: UptimeKumaApi = cur_user['api']
+-    try:
+-        print (status_page_data.id)
+-        return api.save_status_page(
++):
++    api: UptimeKumaApi = cur_user["api"]
++
++    async def save_status_page_wrapper(
++        slug: str, status_page_data: SaveStatusPageRequest
++    ):
++        logging.info(
++            f"Saving status page with slug={slug}, status_page_data={json.dumps(status_page_data.dict())}"
++        )
++        return await api.save_status_page(
+             slug,
+             id=status_page_data.id,
+             title=status_page_data.title,
+@@ -69,26 +72,32 @@ async def save_status_page(
+             icon=status_page_data.icon,
+             publicGroupList=status_page_data.publicGroupList,
+         )
+-    except UptimeKumaException as e:
+-        logging.error(e)
+-        raise HTTPException(400, str(e))
+-    except Exception as e:
+-        logging.fatal(e)
+-        raise HTTPException(500, str(e))
+ 
+-@router.delete("/{slug}", response_model=DeleteStatusPageResponse, description="Delete a status page")
+-async def delete_status_page(slug: str = Path(...), cur_user: API = Depends(get_current_user)):
+-    api: UptimeKumaApi = cur_user['api']
+-    try:
+-        return api.delete_status_page(slug)
+-    #Catch type error...which is actually a success, go figgure. {"detail":"'NoneType' object has no attribute 'values'"}
+-    except TypeError as e:
+-        if "NoneType" in str(e):
+-            logging.info("Status page deleted successfully")
+-            return {"status": "success"}
+-    except UptimeKumaException as e:
+-        logging.error(e)
+-        raise HTTPException(404, str(e))
+-    except Exception as e:
+-        logging.fatal(e)
+-        raise HTTPException(500, str(e))
+\ No newline at end of file
++    return await handle_api_exceptions(save_status_page_wrapper, slug, status_page_data)
++
++
++@router.delete(
++    "/{slug}",
++    response_model=DeleteStatusPageResponse,
++    description="Delete a status page",
++)
++async def delete_status_page(
++    slug: str = Path(...), cur_user: API = Depends(get_current_user)
++):
++    api: UptimeKumaApi = cur_user["api"]
++
++    def delete_status_page_api(slug):
++        logging.info(f"Deleting status page with slug={slug}")
++        try:
++            result = api.delete_status_page(slug)
++            return {"detail": "success"}
++        except UptimeKumaException as e:
++            raise e
++        # catch all other exceptions
++        except Exception as e:
++            # Exception: 'NoneType' object has no attribute 'values'
++            if "NoneType" in str(e):
++                logging.info(f"Exception: {e}")
++                return {"detail": "success"}
++
++    return await handle_api_exceptions(delete_status_page_api, slug)
+diff --git a/app/schemas/statuspage.py b/app/schemas/statuspage.py
+index 0a7ee03..4633bb2 100644
+--- a/app/schemas/statuspage.py
++++ b/app/schemas/statuspage.py
+@@ -1,6 +1,7 @@
+ from typing import List, Optional
+ from pydantic import BaseModel, Field, HttpUrl, constr
+ 
++
+ class Incident(BaseModel):
+     content: str
+     createdDate: str
+@@ -10,18 +11,21 @@ class Incident(BaseModel):
+     style: str
+     title: str
+ 
++
+ class Monitor(BaseModel):
+     id: int
+     maintenance: Optional[bool]
+     name: str
+     sendUrl: int
+ 
++
+ class PublicGroup(BaseModel):
+     id: int
+     monitorList: List[Monitor]
+     name: str
+     weight: int
+ 
++
+ class StatusPage(BaseModel):
+     customCSS: Optional[str] = None
+     description: Optional[str]
+@@ -40,16 +44,21 @@ class StatusPage(BaseModel):
+     title: str
+     publicGroupList: Optional[List[PublicGroup]]
+ 
++
+ class StatusPageList(BaseModel):
+     statuspages: List[StatusPage]
+ 
++
+ class AddStatusPageRequest(BaseModel):
+     slug: Optional[str] = None
+-    title:  Optional[str] = None
+-    msg:  Optional[str] = None
++    title: Optional[str] = None
++    msg: Optional[str] = None
++
+ 
+ class AddStatusPageResponse(BaseModel):
+-    msg:  Optional[str] = None
++    msg: Optional[str] = None
++
++
+ class SaveStatusPageRequest(BaseModel):
+     id: int
+     title: str
+@@ -66,8 +75,16 @@ class SaveStatusPageRequest(BaseModel):
+     icon: Optional[str] = "/icon.svg"
+     publicGroupList: Optional[List] = None
+ 
++
+ class SaveStatusPageResponse(BaseModel):
+     detail: str
+ 
++
+ class DeleteStatusPageResponse(BaseModel):
+-    detail: str = "Status page deleted"
++    detail: Optional[str] = Field(None, description="Error detail, if any")
++
++
++## Error
++# uptime-kuma-web-api-api-1  | pydantic.error_wrappers.ValidationError: 1 validation error for DeleteStatusPageResponse
++# uptime-kuma-web-api-api-1  | response
++# uptime-kuma-web-api-api-1  |   none is not an allowed value (type=type_error.none.not_allowed)
+diff --git a/app/utils/deps.py b/app/utils/deps.py
+index 13c930c..9796195 100644
+--- a/app/utils/deps.py
++++ b/app/utils/deps.py
+@@ -1,9 +1,8 @@
+-from typing import Optional
+-from fastapi.security import OAuth2PasswordBearer
++# authentication.py
+ from fastapi import Depends, HTTPException
++from fastapi.security import OAuth2PasswordBearer
+ from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
+-
+-
++from typing import Optional
+ import jwt
+ from pydantic import ValidationError
+ 
+@@ -13,47 +12,37 @@ from models.user import UserCreate, UserResponse
+ from config import settings, logger as logging
+ from utils import security
+ 
+-oauth2_token = OAuth2PasswordBearer(
+-    tokenUrl= "/login/access-token/"
+-)
++oauth2_token = OAuth2PasswordBearer(tokenUrl="/login/access-token/")
++
+ 
+ async def get_current_user(token: str = Depends(oauth2_token)):
+     try:
+         payload = jwt.decode(
+-            token, 
+-            settings.SECRET_KEY, algorithms = [security.ALGORITHM]
+-            )
+-        token_data = JWTData(**payload)     
+-        
++            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
++        )
++        token_data = JWTData(**payload)
++
+     except (jwt.exceptions.InvalidSignatureError, ValidationError) as e:
+         logging.info(e)
+-        raise HTTPException(
+-            status_code=403,
+-            detail="invalid credentials"
+-        )
+-        
++        raise HTTPException(status_code=403, detail="invalid credentials")
++
+     except jwt.exceptions.ExpiredSignatureError as e:
+         logging.info(e)
+-        raise HTTPException(
+-            status_code=403,
+-            detail="Token expired !!"
+-        )
+-    try :
+-    
++        raise HTTPException(status_code=403, detail="Token expired !!")
++    try:
+         api = UptimeKumaApi(settings.KUMA_SERVER)
+         api.login_by_token(token_data.sub)
+-        user ={"token": token_data.sub, "api":api}
++        user = {"token": token_data.sub, "api": api}
+         return user
+     except UptimeKumaException as e:
+         logging.fatal(e)
+         raise HTTPException(400, {"error": str(e)})
+ 
+ 
+-def authenticate(user: UserCreate, password:str)-> Optional[UserResponse]:
++def authenticate(user: UserCreate, password: str) -> Optional[UserResponse]:
+     if not user:
+         return None
+ 
+     if not verify_password(password, user.password_hash):
+         return None
+     return user
+-
+diff --git a/app/utils/security.py b/app/utils/security.py
+index 8064784..bd6c276 100644
+--- a/app/utils/security.py
++++ b/app/utils/security.py
+@@ -6,26 +6,43 @@ import jwt
+ 
+ from config import settings
+ 
+-
+-context = CryptContext(schemes = ["bcrypt"], deprecated="auto")
++# Create a single instance of CryptContext for better performance and thread safety.
++pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ 
+ ALGORITHM = "HS256"
+ 
+-def create_access_token(subject: Union[str, Any] , expire_delta = Optional[datetime])-> str:
+-    if expire_delta:
+-        expire = datetime.utcnow() + expire_delta
+-    else:
+-        expire = datetime.utcnow() + timedelta(
+-            minutes = settings.ACCESS_TOKEN_EXPIRE
+-        )
+-    to_encode = {"exp": expire, "sub": subject}
+-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm = ALGORITHM)
+-    
+-    return encoded_jwt
+-
+-
+-def hash_password(password: str)-> str:
+-    return context.hash(password)
+-
+-def verify_password(password: str, hashed_password:str)->bool :
+-    return context.verify(password, hashed_password)
+\ No newline at end of file
++def create_access_token(subject: Union[str, Any], expire_delta: Optional[timedelta] = None) -> str:
++    """
++    Create an access token with an expiration date.
++
++    :param subject: The subject for the token (e.g., user ID)
++    :param expire_delta: The timedelta after which the token will expire. If not provided, default value from settings is used.
++    :return: The encoded JWT token as a string
++    """
++    # Calculate the expiration time
++    expire = datetime.utcnow() + (expire_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE))
++
++    # Create the JWT payload
++    payload = {"exp": expire, "sub": subject}
++
++    # Encode and return the JWT token
++    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
++
++def hash_password(password: str) -> str:
++    """
++    Hash the given password.
++
++    :param password: The password to hash
++    :return: The hashed password as a string
++    """
++    return pwd_context.hash(password)
++
++def verify_password(password: str, hashed_password: str) -> bool:
++    """
++    Verify if the given password matches the hashed password.
++
++    :param password: The password to verify
++    :param hashed_password: The hashed password to compare with
++    :return: True if the password matches, False otherwise
++    """
++    return pwd_context.verify(password, hashed_password)
+diff --git a/db/test.sqlite3 b/db/test.sqlite3
+index 0caf492..bcf89f5 100644
+Binary files a/db/test.sqlite3 and b/db/test.sqlite3 differ
+diff --git a/requirements.txt b/requirements.txt
+index d440e84..bbb811e 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -12,7 +12,7 @@ idna==3.4
+ iso8601==1.1.0
+ packaging==21.3
+ passlib==1.7.4
+-pydantic==1.10.2
++pydantic==1.10.7
+ PyJWT==1.7.1
+ pyparsing==3.0.9
+ pypika-tortoise==0.1.6
+@@ -35,3 +35,4 @@ uvloop==0.17.0
+ watchfiles==0.17.0
+ websocket-client==1.4.1
+ websockets==10.3
++asyncio==3.4.3
+\ No newline at end of file
