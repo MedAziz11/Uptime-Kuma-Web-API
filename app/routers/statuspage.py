@@ -13,7 +13,6 @@ from schemas.statuspage import (
     SaveStatusPageResponse,
     DeleteStatusPageResponse,
 )
-import json
 
 router = APIRouter(redirect_slashes=True)
 
@@ -53,9 +52,6 @@ async def save_status_page(
     async def save_status_page_wrapper(
         slug: str, status_page_data: SaveStatusPageRequest
     ):
-        logging.info(
-            f"Saving status page with slug={slug}, status_page_data={json.dumps(status_page_data.dict())}"
-        )
         return await api.save_status_page(
             slug,
             id=status_page_data.id,

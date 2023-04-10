@@ -1,7 +1,23 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
-APP_MODULE=main:app
-export HOST=${HOST:-0.0.0.0}
-export PORT=${PORT:-8000}  
+NAME=uptime-kuma-web-api
+DIR=/app
+USER=appuser
+GROUP=appgroup
+WORKERS=1
+VENV=$DIR/.venv/bin/activate
+WORKER_CLASS=uvicorn.workers.UvicornWorker
+BIND=0.0.0.0:8000
+LOG_LEVEL=info
 
-exec uvicorn ${APP_MODULE} --host=${HOST} --port=${PORT}
+cd $DIR
+
+exec gunicorn main:app \
+  --name $NAME \
+  --workers $WORKERS \
+  --worker-class $WORKER_CLASS \
+  --user=$USER \
+  --group=$GROUP \
+  --bind=$BIND \
+  --log-level=$LOG_LEVEL \
+  --log-file=-
