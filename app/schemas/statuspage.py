@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field, HttpUrl, constr
 
+
 class Incident(BaseModel):
     content: str
     createdDate: str
@@ -10,17 +11,20 @@ class Incident(BaseModel):
     style: str
     title: str
 
+
 class Monitor(BaseModel):
     id: int
     maintenance: Optional[bool]
     name: str
     sendUrl: int
 
+
 class PublicGroup(BaseModel):
     id: int
     monitorList: List[Monitor]
     name: str
     weight: int
+
 
 class StatusPage(BaseModel):
     customCSS: Optional[str] = None
@@ -40,16 +44,21 @@ class StatusPage(BaseModel):
     title: str
     publicGroupList: Optional[List[PublicGroup]]
 
+
 class StatusPageList(BaseModel):
     statuspages: List[StatusPage]
 
+
 class AddStatusPageRequest(BaseModel):
     slug: Optional[str] = None
-    title:  Optional[str] = None
-    msg:  Optional[str] = None
+    title: Optional[str] = None
+    msg: Optional[str] = None
+
 
 class AddStatusPageResponse(BaseModel):
-    msg:  Optional[str] = None
+    msg: Optional[str] = None
+
+
 class SaveStatusPageRequest(BaseModel):
     id: int
     title: str
@@ -66,8 +75,16 @@ class SaveStatusPageRequest(BaseModel):
     icon: Optional[str] = "/icon.svg"
     publicGroupList: Optional[List] = None
 
+
 class SaveStatusPageResponse(BaseModel):
     detail: str
 
+
 class DeleteStatusPageResponse(BaseModel):
-    detail: str = "Status page deleted"
+    detail: Optional[str] = Field(None, description="Error detail, if any")
+
+
+## Error
+# uptime-kuma-web-api-api-1  | pydantic.error_wrappers.ValidationError: 1 validation error for DeleteStatusPageResponse
+# uptime-kuma-web-api-api-1  | response
+# uptime-kuma-web-api-api-1  |   none is not an allowed value (type=type_error.none.not_allowed)

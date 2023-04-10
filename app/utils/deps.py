@@ -1,9 +1,8 @@
-from typing import Optional
-from fastapi.security import OAuth2PasswordBearer
+# authentication.py
 from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
 from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
-
-
+from typing import Optional
 import jwt
 from pydantic import ValidationError
 
@@ -13,47 +12,37 @@ from models.user import UserCreate, UserResponse
 from config import settings, logger as logging
 from utils import security
 
-oauth2_token = OAuth2PasswordBearer(
-    tokenUrl= "/login/access-token/"
-)
+oauth2_token = OAuth2PasswordBearer(tokenUrl="/login/access-token/")
+
 
 async def get_current_user(token: str = Depends(oauth2_token)):
     try:
         payload = jwt.decode(
-            token, 
-            settings.SECRET_KEY, algorithms = [security.ALGORITHM]
-            )
-        token_data = JWTData(**payload)     
-        
+            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+        )
+        token_data = JWTData(**payload)
+
     except (jwt.exceptions.InvalidSignatureError, ValidationError) as e:
         logging.info(e)
-        raise HTTPException(
-            status_code=403,
-            detail="invalid credentials"
-        )
-        
+        raise HTTPException(status_code=403, detail="invalid credentials")
+
     except jwt.exceptions.ExpiredSignatureError as e:
         logging.info(e)
-        raise HTTPException(
-            status_code=403,
-            detail="Token expired !!"
-        )
-    try :
-    
+        raise HTTPException(status_code=403, detail="Token expired !!")
+    try:
         api = UptimeKumaApi(settings.KUMA_SERVER)
         api.login_by_token(token_data.sub)
-        user ={"token": token_data.sub, "api":api}
+        user = {"token": token_data.sub, "api": api}
         return user
     except UptimeKumaException as e:
         logging.fatal(e)
         raise HTTPException(400, {"error": str(e)})
 
 
-def authenticate(user: UserCreate, password:str)-> Optional[UserResponse]:
+def authenticate(user: UserCreate, password: str) -> Optional[UserResponse]:
     if not user:
         return None
 
     if not verify_password(password, user.password_hash):
         return None
     return user
-

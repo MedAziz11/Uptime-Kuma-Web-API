@@ -12,7 +12,7 @@ idna==3.4
 iso8601==1.1.0
 packaging==21.3
 passlib==1.7.4
-pydantic==1.10.2
+pydantic==1.10.7
 PyJWT==1.7.1
 pyparsing==3.0.9
 pypika-tortoise==0.1.6
@@ -35,3 +35,4 @@ uvloop==0.17.0
 watchfiles==0.17.0
 websocket-client==1.4.1
 websockets==10.3
+asyncio==3.4.3
