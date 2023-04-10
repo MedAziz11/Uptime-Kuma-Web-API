@@ -12,7 +12,7 @@ from routers import (
     uptime,
     ping,
     database,
-    settings as user,
+    user,
     settings,
     maintenance,
 )
