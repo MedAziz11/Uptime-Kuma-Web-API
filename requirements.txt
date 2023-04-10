@@ -30,9 +30,10 @@ tortoise-orm==0.19.2
 typing_extensions==4.4.0
 uptime-kuma-api==0.13.0
 urllib3==1.26.12
-uvicorn==0.18.3
 uvloop==0.17.0
 watchfiles==0.17.0
 websocket-client==1.4.1
 websockets==10.3
 asyncio==3.4.3
+gunicorn==20.1.0
+uvicorn==0.21.1
