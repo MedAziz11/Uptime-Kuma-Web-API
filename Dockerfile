@@ -12,18 +12,21 @@ RUN chown appuser:appgroup /app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Upgrade pip and install the requirements
-COPY --chown=appuser:appgroup ./requirements.txt ./
-COPY --chown=appuser:appgroup ./app /app
-
-USER appuser
 
 # Create a virtual environment and activate it
 RUN python -m venv venv
 ENV PATH="/app/venv/bin:$PATH"
 
+# Upgrade pip and install the requirements
+COPY --chown=appuser:appgroup ./requirements.txt ./
+
+
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r ./requirements.txt
+       
+COPY --chown=appuser:appgroup ./app /app
+
+USER appuser
 
 
 # Second stage: Runtime environment
