@@ -16,6 +16,7 @@ from schemas.statuspage import (
 from uptime_kuma_api import IncidentStyle, UptimeKumaApi, UptimeKumaException
 from utils.deps import get_current_user
 from utils.exceptions import handle_api_exceptions
+from config import logger
 
 router = APIRouter(redirect_slashes=True)
 
@@ -46,18 +47,15 @@ async def add_status_page(
     "/{slug}", response_model=SaveStatusPageResponse, description="Save a status page"
 )
 async def save_status_page(
+    status_page_data: SaveStatusPageRequest,
     slug: str = Path(...),
-    status_page_data: SaveStatusPageRequest = Body(...),
     cur_user: API = Depends(get_current_user),
 ):
     api: UptimeKumaApi = cur_user["api"]
 
-    async def save_status_page_wrapper(
-        slug: str, status_page_data: SaveStatusPageRequest
-    ):
-        return await api.save_status_page(
-            slug,
-            id=status_page_data.id,
+    
+
+    return {"detail": await handle_api_exceptions(api.save_status_page, slug, 
             title=status_page_data.title,
             description=status_page_data.description,
             theme=status_page_data.theme,
@@ -69,11 +67,7 @@ async def save_status_page(
             footerText=status_page_data.footerText,
             showPoweredBy=status_page_data.showPoweredBy,
             icon=status_page_data.icon,
-            publicGroupList=status_page_data.publicGroupList,
-        )
-
-    return await handle_api_exceptions(save_status_page_wrapper, slug, status_page_data)
-
+            publicGroupList=status_page_data.publicGroupList) }
 
 @router.delete(
     "/{slug}",
@@ -89,6 +83,7 @@ async def delete_status_page(
         logging.info(f"Deleting status page with slug={slug}")
         try:
             result = api.delete_status_page(slug)
+            logger.debug("res", result)
             return {"detail": "success"}
         except UptimeKumaException as e:
             raise e

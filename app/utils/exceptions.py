@@ -11,7 +11,7 @@ async def handle_api_exceptions(func: Callable[..., Any], *args, **kwargs) -> An
             result = await func(*args, **kwargs)
         else:
             result = func(*args, **kwargs)
-        return result or {"detail": ""}
+        return result
     except UptimeKumaException as e:
         logging.error(e)
         raise HTTPException(status_code=400, detail=str(e))

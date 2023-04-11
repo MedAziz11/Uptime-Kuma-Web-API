@@ -1,16 +1,16 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
-NAME=uptime-kuma-web-api
-DIR=/app
-USER=appuser
-GROUP=appgroup
-WORKERS=1
-VENV=$DIR/.venv/bin/activate
-WORKER_CLASS=uvicorn.workers.UvicornWorker
-BIND=0.0.0.0:8000
-LOG_LEVEL=info
+export NAME=uptime-kuma-web-api
+export DIR=/app
+export USER=appuser
+export GROUP=appgroup
+export WORKERS=1
+export VENV=$DIR/.venv/bin/activate
+export WORKER_CLASS=uvicorn.workers.UvicornWorker
+export BIND=0.0.0.0:8000
+export LOG_LEVEL=info
 
-cd $DIR
+# cd $DIR
 
 exec gunicorn main:app \
   --name $NAME \
@@ -19,5 +19,4 @@ exec gunicorn main:app \
   --user=$USER \
   --group=$GROUP \
   --bind=$BIND \
-  --log-level=$LOG_LEVEL \
-  --log-file=-
+  --log-level=$LOG_LEVEL 
