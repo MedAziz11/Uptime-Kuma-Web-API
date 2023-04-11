@@ -1,10 +1,13 @@
 from pydantic import AnyHttpUrl, BaseSettings
+from fastapi.logger import logger as fast_api_logger
 from typing import List
 import secrets
 import logging
 import os
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger("gunicorn.error")
+fast_api_logger.handlers = logger.handlers
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str="Uptime-Kuma-API"

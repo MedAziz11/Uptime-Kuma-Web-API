@@ -48,7 +48,7 @@ class StatusPage(BaseModel):
 
 
 class StatusPageList(BaseModel):
-    statuspages: List[StatusPage]
+    statuspages: List[StatusPage] = []
 
 
 class AddStatusPageRequest(BaseModel):
@@ -62,9 +62,7 @@ class AddStatusPageResponse(BaseModel):
 
 
 class SaveStatusPageRequest(BaseModel):
-    id: int
-    title: str
-    slug: constr(min_length=1)
+    title: Optional[str]
     description: Optional[str] = None
     theme: Optional[str] = "light"
     published: Optional[bool] = True
