@@ -1,18 +1,21 @@
-from fastapi import APIRouter, Depends, Path, Body
-from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
 from config import logger as logging
+from fastapi import APIRouter, Body, Depends, Path
 from schemas.api import API
-from utils.deps import get_current_user
-from utils.exceptions import handle_api_exceptions
 from schemas.statuspage import (
-    StatusPageList,
-    StatusPage,
-    AddStatusPageResponse,
     AddStatusPageRequest,
+    AddStatusPageResponse,
+    DeleteStatusPageResponse,
+    PostIncidentRequest,
+    PostIncidentResponse,
     SaveStatusPageRequest,
     SaveStatusPageResponse,
-    DeleteStatusPageResponse,
+    StatusPage,
+    StatusPageList,
+    UnpinIncidentResponse,
 )
+from uptime_kuma_api import IncidentStyle, UptimeKumaApi, UptimeKumaException
+from utils.deps import get_current_user
+from utils.exceptions import handle_api_exceptions
 
 router = APIRouter(redirect_slashes=True)
 
@@ -97,3 +100,35 @@ async def delete_status_page(
                 return {"detail": "success"}
 
     return await handle_api_exceptions(delete_status_page_api, slug)
+
+
+@router.post(
+    "/{slug}/incident",
+    response_model=PostIncidentResponse,
+    description="Post an incident to a status page",
+)
+async def post_incident(
+    slug: str,
+    incident_data: PostIncidentRequest,
+    cur_user: API = Depends(get_current_user),
+):
+    api: UptimeKumaApi = cur_user["api"]
+
+    return await handle_api_exceptions(
+        api.post_incident,
+        slug,
+        incident_data.title,
+        incident_data.content,
+        incident_data.style or IncidentStyle.PRIMARY,
+    )
+
+
+@router.delete(
+    "/{slug}/incident/unpin",
+    response_model=UnpinIncidentResponse,
+    description="Unpin an incident from a status page",
+)
+async def unpin_incident(slug: str, cur_user: API = Depends(get_current_user)):
+    api: UptimeKumaApi = cur_user["api"]
+
+    return await handle_api_exceptions(api.unpin_incident, slug)

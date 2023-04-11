@@ -1,5 +1,7 @@
 from typing import List, Optional
+
 from pydantic import BaseModel, Field, HttpUrl, constr
+from uptime_kuma_api import IncidentStyle
 
 
 class Incident(BaseModel):
@@ -88,3 +90,22 @@ class DeleteStatusPageResponse(BaseModel):
 # uptime-kuma-web-api-api-1  | pydantic.error_wrappers.ValidationError: 1 validation error for DeleteStatusPageResponse
 # uptime-kuma-web-api-api-1  | response
 # uptime-kuma-web-api-api-1  |   none is not an allowed value (type=type_error.none.not_allowed)
+
+
+class PostIncidentRequest(BaseModel):
+    title: str
+    content: str
+    style: IncidentStyle = IncidentStyle.PRIMARY
+
+
+class PostIncidentResponse(BaseModel):
+    content: str
+    createdDate: str
+    id: int
+    pin: bool
+    style: str
+    title: str
+
+
+class UnpinIncidentResponse(BaseModel):
+    detail: str
