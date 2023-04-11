@@ -6,7 +6,7 @@ down:
 
 test:
 	bash tests/monitor.sh
-	bash test/maintenance.sh
+	bash tests/maintenance.sh
 	bash tests/statuspage.sh
 
 setup:
