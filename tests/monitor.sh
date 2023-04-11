@@ -2,7 +2,7 @@
 
 BASE_URL="http://127.0.0.1:8000"
 
-TOKEN=$(curl -X 'POST' \
+TOKEN=$(curl -s -X 'POST' \
   "${BASE_URL}/login/access-token" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/x-www-form-urlencoded' \
@@ -11,4 +11,4 @@ TOKEN=$(curl -X 'POST' \
 echo "Token: ${TOKEN}"
 
 echo "Get all monitor pages:"
-curl -L -H 'Accept: application/json' -H "Authorization: Bearer ${TOKEN}" "${BASE_URL}/monitors"
+curl -s -L -H 'Accept: application/json' -H "Authorization: Bearer ${TOKEN}" "${BASE_URL}/monitors"
