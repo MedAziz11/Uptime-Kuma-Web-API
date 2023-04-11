@@ -34,7 +34,7 @@ curl -X 'POST' \
     "theme": "dark",
     "published": true,
     "showTags": true,
-    "domainNameList": ["https://call-dev.iccsafe.org", "https://call-dev-rtm.iccsafe.org"],
+    "domainNameList": ["https://example.com", "https://test.com"],
     "googleAnalyticsId": "UA-123456789-1",
     "customCSS": "body { background-color: red; }",
     "footerText": "Custom Footer Text",
@@ -43,18 +43,18 @@ curl -X 'POST' \
     "publicGroupList": [
         {
             "id": 1,
-            "name": "HSL DEV Monitoring Group",
+            "name": "Test Monitoring Group",
             "monitorList": [
                 {
                     "id": 1,
                     "name": "Monitor 1",
-                    "url": "https://call-dev.iccsafe.org/healthchecks/ping",
+                    "url": "https://example.com",
                     "type": "http"
                 },
                 {
                     "id": 2,
                     "name": "Monitor 1",
-                    "url": "https://call-dev-rtm.iccsafe.org/healthchecks/ping",
+                    "url": "https://test.com",
                     "type": "http"
                 }
             ]
