@@ -50,13 +50,13 @@ curl -X 'GET' \
 
 echo "Get maintenance by ID: \n"
 curl -X 'GET' \
-  'http://localhost:8000/maintenance/2' \
+  "http://localhost:8000/maintenance/${MAINTENANCE_ID}" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}"
 
 echo "Update maintenance: \n"
 curl -X 'PATCH' \
-  'http://localhost:8000/maintenance/2' \
+  "http://localhost:8000/maintenance/${MAINTENANCE_ID}" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -H 'Content-Type: application/json' \
@@ -85,21 +85,21 @@ curl -X 'PATCH' \
 
 echo "Pause maintenance: \n"
 curl -X 'POST' \
-  'http://localhost:8000/maintenance/2/pause' \
+  "http://localhost:8000/maintenance/${MAINTENANCE_ID}/pause" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -d ''
 
 echo "Resume maintenance: \n"
 curl -X 'POST' \
-  'http://localhost:8000/maintenance/2/resume' \
+  "http://localhost:8000/maintenance/${MAINTENANCE_ID}/resume" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -d ''
 
 echo "Add monitors to a maintenance: \n"
 curl -X 'POST' \
-  'http://localhost:8000/maintenance/2/monitors' \
+  "http://localhost:8000/maintenance/${MAINTENANCE_ID}/monitors" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -H 'Content-Type: application/json' \
@@ -112,7 +112,7 @@ curl -X 'POST' \
 
 echo "Get monitors to a maintenance: \n"
 curl -X 'GET' \
-  'http://localhost:8000/maintenance/1/monitors' \
+  "http://localhost:8000/maintenance/${MAINTENANCE_ID}/monitors" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}"
 
@@ -120,4 +120,4 @@ echo "Delete maintenance: \n"
 curl -X 'DELETE' \
   -H 'Accept: application/json' \
   -H "${AUTH_HEADER}" \
-  ${BASE_URL}/maintenances/${MAINTENANCE_ID}
+  "${BASE_URL}/maintenances/${MAINTENANCE_ID}"

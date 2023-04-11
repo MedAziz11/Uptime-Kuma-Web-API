@@ -63,10 +63,10 @@ curl -X 'POST' \
   }' \
   'http://localhost:8000/statuspages/new-page'
 
-# echo -e "\nDelete a status page:"
-# curl -X 'DELETE' \
-#   -H "Authorization: Bearer ${TOKEN}" \
-#   'http://localhost:8000/statuspages/new-page'
+echo -e "\nDelete a status page:"
+curl -X 'DELETE' \
+  -H "Authorization: Bearer ${TOKEN}" \
+  'http://localhost:8000/statuspages/new-page'
 
 echo -e "\nPost an incident:"
 INCIDENT_ID=$(curl -X 'POST' \
