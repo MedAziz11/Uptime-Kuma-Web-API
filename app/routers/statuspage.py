@@ -44,7 +44,7 @@ async def add_status_page(
 
 
 @router.post(
-    "/{slug}", description="Save a status page"
+    "/{slug}", response_model=SaveStatusPageResponse, description="Save a status page"
 )
 async def save_status_page(
     status_page_data: SaveStatusPageRequest,

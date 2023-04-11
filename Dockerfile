@@ -49,11 +49,13 @@ ENV PYTHONUNBUFFERED 1
 ENV PATH="/app/venv/bin:$PATH"
 
 ## Cleanup without impacting the codebase
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh 
 
 USER appuser
 
-# Run the app
+#Run the app
 ENTRYPOINT ["/app/entrypoint.sh"]
+
+# ENTRYPOINT [ "tail", "-f", "/dev/null" ]
 
 

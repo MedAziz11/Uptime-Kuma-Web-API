@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, HttpUrl, constr
 from uptime_kuma_api import IncidentStyle
@@ -67,7 +67,7 @@ class SaveStatusPageRequest(BaseModel):
     theme: Optional[str] = "light"
     published: Optional[bool] = True
     showTags: Optional[bool] = False
-    domainNameList: Optional[List[HttpUrl]] = None
+    domainNameList: Optional[List[HttpUrl]] = []
     googleAnalyticsId: Optional[str] = None
     customCSS: Optional[str] = ""
     footerText: Optional[str] = None
@@ -77,7 +77,7 @@ class SaveStatusPageRequest(BaseModel):
 
 
 class SaveStatusPageResponse(BaseModel):
-    detail: str
+    detail: Any
 
 
 class DeleteStatusPageResponse(BaseModel):
