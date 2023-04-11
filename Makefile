@@ -6,4 +6,10 @@ down:
 
 test:
 	bash tests/monitor.sh
+	bash test/maintenance.sh
 	bash tests/statuspage.sh
+
+setup:
+	python3 -m venv venv && \
+	. venv/bin/activate && \
+	pip install -r requirements.txt
