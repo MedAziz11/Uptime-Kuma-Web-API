@@ -72,7 +72,7 @@ jobs:
             ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}:${{ matrix.branch }}-${{ env.PLATFORM_TAG }}
           cache-from: type=local,src=${{ env.CACHE_PATH }}
           cache-to: type=local,dest=${{ env.CACHE_PATH }}
-          load: true
+        
 
 
       # FUTURE TESTS?
