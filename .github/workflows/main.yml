@@ -59,10 +59,17 @@ jobs:
         run: |
           REPO=${{ env.DOCKERHUB_REPO }}
           IMAGE=${{ env.DOCKERHUB_IMAGE }}
-          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+          
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | sed 's/\//-/g')
+          else
+            BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+          fi
+
           PLATFORM_TAG=$(echo "${{ matrix.platform }}" | sed 's/\//-/g')
           TAGS="${REPO}/${IMAGE}:${BRANCH_NAME},${REPO}/${IMAGE}:${BRANCH_NAME}-${PLATFORM_TAG}"
           echo "::set-output name=tags::${TAGS}"
+
 
       # Build, test, and push the Docker image
       - name: Build, Test, and Push Docker image
