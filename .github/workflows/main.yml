@@ -2,24 +2,73 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - develop
+    tags:
+      - "v*.*.*"
+
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - develop
+
+env:
+  DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO }}
+  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
 
 jobs:
-
   build-and-push:
-
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        branch: [main, develop]
 
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Build and Push the Docker image
-      uses: mr-smithers-excellent/docker-build-push@v6
-      with:
-        image: medaziz11/uptimekuma_restapi
-        tags: 1.2
-        registry: docker.io
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.branch }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.branch }}-
+            ${{ runner.os }}-buildx-
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set image tags
+        id: image_tags
+        run: |
+          REPO=${{ env.DOCKERHUB_REPO }}
+          IMAGE=${{ env.DOCKERHUB_IMAGE }}
+          TAGS="${REPO}/${IMAGE}:"
+          if [[ $GITHUB_REF == "refs/heads/main" ]]; then
+            TAGS+="latest"
+          elif [[ $GITHUB_REF == "refs/heads/develop" ]]; then
+            TAGS+="dev"
+          elif [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=$(echo ${GITHUB_REF#refs/tags/v} | sed 's/\//-/g')
+            TAGS+="v${VERSION}"
+          else
+            TAGS+=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+          fi
+          echo "::set-output name=tags::${TAGS}"
+
+      - name: Build and Push the Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.image_tags.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
