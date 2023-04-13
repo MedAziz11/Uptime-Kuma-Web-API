@@ -60,7 +60,10 @@ jobs:
           REPO=${{ env.DOCKERHUB_REPO }}
           IMAGE=${{ env.DOCKERHUB_IMAGE }}
 
-          if [[ $GITHUB_REF == "refs/heads/main" ]]; then
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            PR_NUMBER=${{ github.event.number }}
+            TAGS="${REPO}/${IMAGE}:pr-${PR_NUMBER}"
+          elif [[ $GITHUB_REF == "refs/heads/main" ]]; then
             TAGS="${REPO}/${IMAGE}:latest"
           elif [[ $GITHUB_REF == "refs/heads/develop" ]]; then
             TAGS="${REPO}/${IMAGE}:dev"
