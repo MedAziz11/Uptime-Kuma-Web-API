@@ -23,9 +23,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        branch: [main, develop]
         platform: [linux/amd64, linux/arm64]
-
+        include:
+          - target_branch: main
+            branch: main
+          - target_branch: develop
+            branch: develop
+    if: github.event.pull_request.base.ref == matrix.target_branch || (github.event_name == 'push' && github.ref == 'refs/heads/' + matrix.branch)
     steps:
       # Check out the repository code
       - name: Checkout code
