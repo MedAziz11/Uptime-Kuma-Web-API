@@ -53,12 +53,15 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Set platform tag without "/"
-      - name: Set platform tag
-        id: platform_tag
+      - name: Set image tags
+        id: image_tags
         run: |
+          REPO=${{ env.DOCKERHUB_REPO }}
+          IMAGE=${{ env.DOCKERHUB_IMAGE }}
+          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
           PLATFORM_TAG=$(echo "${{ matrix.platform }}" | sed 's/\//-/g')
-          echo "PLATFORM_TAG=${PLATFORM_TAG}" >> $GITHUB_ENV
+          TAGS="${REPO}/${IMAGE}:${BRANCH_NAME},${REPO}/${IMAGE}:${BRANCH_NAME}-${PLATFORM_TAG}"
+          echo "::set-output name=tags::${TAGS}"
 
       # Build, test, and push the Docker image
       - name: Build, Test, and Push Docker image
@@ -67,12 +70,10 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}:${{ matrix.branch }}
-            ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}:${{ matrix.branch }}-${{ env.PLATFORM_TAG }}
+          tags: ${{ steps.image_tags.outputs.tags }}
           cache-from: type=local,src=${{ env.CACHE_PATH }}
           cache-to: type=local,dest=${{ env.CACHE_PATH }}
-          load: true
+
 
 
       # FUTURE TESTS?
