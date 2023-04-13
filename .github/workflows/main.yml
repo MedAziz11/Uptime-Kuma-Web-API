@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         branch: [main, develop]
-        platform: [linux/amd64, linux/arm64]
+        platform: [linux/amd64, linux/arm64, linux/arm32v7, linux/arm64v8]
 
     steps:
       # Check out the repository code
