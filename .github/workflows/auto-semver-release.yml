@@ -1,15 +1,21 @@
 name: Auto Release
+
 on:
   pull_request:
     types: [closed]
+
 jobs:
-  build:
+  release:
+    name: Release
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged
+    if: github.event.pull_request.merged && (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'develop')
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Tag
         uses: K-Phoen/semver-release-action@master
         with:
-          release_branch: master
+          release_branch: ${{ github.event.pull_request.base.ref }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
