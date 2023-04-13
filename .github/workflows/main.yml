@@ -14,8 +14,8 @@ on:
       - develop
 
 env:
-  DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO }}
-  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
+  DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'medaziz11' }}
+  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'uptimekuma_restapi' }}
   CACHE_PATH: /tmp/.buildx-cache
 
 jobs:
