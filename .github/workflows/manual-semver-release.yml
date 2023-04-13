@@ -1,0 +1,28 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      semver:
+        description: 'Which version you want to increment? Use MAJOR, MINOR or PATCH'
+        required: true
+        default: 'PATCH'
+      label:
+        description: 'Add Labels. i.e final, alpha, rc'
+        required: false
+        default: ''
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build
+        run: echo "BUILD COMPLETE 👍"
+      - name: Test
+        run: echo "TESTS PASSED 🎉"
+      - uses: rui-costa/action-automatic-semver-releases@{latest}
+        with:
+          TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          SEMVER: '${{ github.event.inputs.semver }}'
+          LABEL: '${{ github.event.inputs.label }}'
