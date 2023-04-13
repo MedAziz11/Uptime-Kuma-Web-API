@@ -74,8 +74,6 @@ jobs:
           cache-from: type=local,src=${{ env.CACHE_PATH }}
           cache-to: type=local,dest=${{ env.CACHE_PATH }}
 
-
-
       # FUTURE TESTS?
       # # Test the built Docker image
       # - name: Run container structure tests
