@@ -20,6 +20,7 @@ services:
       - KUMA_PASSWORD=${KUMA_PASSWORD:-123test.}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       # - ACCESS_TOKEN_EXPIRATION=${ACCESS_TOKEN_EXPIRATION:-1}
+      - SECRET_KEY=${SECRET_KEY:-pO8WunLtrznm2i4NfOJ25BkG4sh4kYwN1FjzZp8O6E0} #random 32bit string that's url safe.
     ports:
       - "8000:8000"
 
