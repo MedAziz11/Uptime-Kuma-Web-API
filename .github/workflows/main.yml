@@ -1,25 +1,123 @@
-name: Docker Image CI
+name: Stellar Docker Image CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - develop
+    tags:
+      - "v*.*.*"
+
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - develop
+
+env:
+  DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'medaziz11' }}
+  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'uptimekuma_restapi' }}
+  CACHE_PATH: /tmp/.buildx-cache
 
 jobs:
-
-  build-and-push:
-
+  build-test-push:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+        include:
+          - target_branch: main
+            branch: main
+          - target_branch: develop
+            branch: develop
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Build and Push the Docker image
-      uses: mr-smithers-excellent/docker-build-push@v6
-      with:
-        image: medaziz11/uptimekuma_restapi
-        tags: 1.2
-        registry: docker.io
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      # Check out the repository code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Docker Buildx for building images with BuildKit
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      # Cache Docker layers for faster builds
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CACHE_PATH }}
+          key: ${{ runner.os }}-buildx-${{ matrix.branch }}-${{ matrix.platform }}-${{ hashFiles('**/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.branch }}-${{ matrix.platform }}-
+            ${{ runner.os }}-buildx-${{ matrix.branch }}-
+            ${{ runner.os }}-buildx-
+
+      # Log in to Docker Hub using the provided secrets
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set image tags
+        id: image_tags
+        run: |
+          REPO=${{ env.DOCKERHUB_REPO }}
+          IMAGE=${{ env.DOCKERHUB_IMAGE }}
+
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            PR_NUMBER=${{ github.event.number }}
+            TAGS="${REPO}/${IMAGE}:pr-${PR_NUMBER}"
+          elif [[ $GITHUB_REF == "refs/heads/main" ]]; then
+            TAGS="${REPO}/${IMAGE}:latest"
+          elif [[ $GITHUB_REF == "refs/heads/develop" ]]; then
+            TAGS="${REPO}/${IMAGE}:dev"
+          elif [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=$(echo ${GITHUB_REF#refs/tags/v} | sed 's/\//-/g')
+            TAGS="${REPO}/${IMAGE}:v${VERSION},${REPO}/${IMAGE}:latest"
+          else
+            echo "Error: Unexpected branch or tag"
+            exit 1
+          fi
+
+          echo "::set-output name=tags::${TAGS}"
+
+      # Build, test, and push the Docker image
+      - name: Build, Test, and Push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.image_tags.outputs.tags }}
+          cache-from: type=local,src=${{ env.CACHE_PATH }}
+          cache-to: type=local,dest=${{ env.CACHE_PATH }}
+
+      # FUTURE TESTS?
+      # # Test the built Docker image
+      # - name: Run container structure tests
+      #   run: |
+      #     docker run -v $(pwd)/test:/test -v /var/run/docker.sock:/var/run/docker.sock \
+      #       gcr.io/gcp-runtimes/container-structure-test:v1.12.0 \
+      #       test --image ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}:${{ matrix.branch }}-${{ matrix.platform }} \
+      #       --config /test/structure-test-config.yaml
+
+      # # Scan the built Docker image for security vulnerabilities
+      # - name: Scan Docker image for vulnerabilities
+      #   run: |
+      #     IMAGE_TAG=${{ matrix.branch }}-${{ env.PLATFORM_TAG }}
+      #     docker pull ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}:${IMAGE_TAG}
+      #     docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+      #       aquasec/trivy:latest \
+      #       --exit-code 1 \
+      #       --severity CRITICAL,HIGH \
+      #       --ignore-unfixed \
+      #       ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}:${IMAGE_TAG}
+
+            
+      # # Create an issue if the build fails
+      # - name: Create issue if build fails
+      #   if: failure()
+      #   uses: peter-evans/create-issue-from-file@v2
+      #   with:
+      #     title: "Docker Image CI failed for ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}:${{ matrix.branch }}-${{ matrix.platform }}"
+      #     content-filepath: .github/issue_templates/build_failure.md
+      #     token: ${{ secrets.GITHUB_TOKEN }}

@@ -65,15 +65,15 @@ class Monitor(BaseModel):
     radiusCalledStationId: Optional[str] = None
     radiusCallingStationId: Optional[str] = None
 
-    class Config:  
+    class Config:
         use_enum_values = True
 
+
 class MonitorUpdate(Monitor):
-    type: Optional[MonitorType]= None
+    type: Optional[MonitorType] = None
     name: Optional[str] = None
+
 
 class MonitorTag(BaseModel):
     tag_id: int
     value: Optional[str] = ""
-
-    
