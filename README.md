@@ -37,7 +37,7 @@ You will connect with those credentials:
 - Easy to use REST API with most of the Uptime-Kuma features
 - Swagger Docs
 - Dockerized [UptimeKuma_RestAPI Image](https://hub.docker.com/repository/docker/medaziz11/uptimekuma_restapi)
-- Multi-architecture support (amd64, arm64, arm/v7, arm/v6)
+- Multi-architecture support (amd64, arm64)
 
 ### Example :
 
