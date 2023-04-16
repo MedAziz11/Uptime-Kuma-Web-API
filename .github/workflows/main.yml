@@ -21,13 +21,6 @@ env:
 jobs:
   build-test-push:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - target_branch: main
-            branch: main
-          - target_branch: develop
-            branch: develop
     steps:
       # Check out the repository code
       - name: Checkout code
@@ -42,9 +35,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.CACHE_PATH }}
-          key: ${{ runner.os }}-buildx-${{ matrix.branch }}-${{ hashFiles('**/Dockerfile') }}
+          key: ${{ runner.os }}-buildx-${{ github.ref }}-${{ hashFiles('**/Dockerfile') }}
           restore-keys: |
-            ${{ runner.os }}-buildx-${{ matrix.branch }}-
+            ${{ runner.os }}-buildx-${{ github.ref }}-
             ${{ runner.os }}-buildx-
 
       # Log in to Docker Hub using the provided secrets
@@ -60,6 +53,7 @@ jobs:
         run: |
           REPO=${{ env.DOCKERHUB_REPO }}
           IMAGE=${{ env.DOCKERHUB_IMAGE }}
+          BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
 
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             PR_NUMBER=${{ github.event.number }}
