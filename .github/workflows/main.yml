@@ -23,7 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [linux/amd64, linux/arm64]
         include:
           - target_branch: main
             branch: main
@@ -43,9 +42,8 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.CACHE_PATH }}
-          key: ${{ runner.os }}-buildx-${{ matrix.branch }}-${{ matrix.platform }}-${{ hashFiles('**/Dockerfile') }}
+          key: ${{ runner.os }}-buildx-${{ matrix.branch }}-${{ hashFiles('**/Dockerfile') }}
           restore-keys: |
-            ${{ runner.os }}-buildx-${{ matrix.branch }}-${{ matrix.platform }}-
             ${{ runner.os }}-buildx-${{ matrix.branch }}-
             ${{ runner.os }}-buildx-
 
@@ -85,7 +83,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.image_tags.outputs.tags }}
           cache-from: type=local,src=${{ env.CACHE_PATH }}
@@ -110,14 +108,5 @@ jobs:
       #       --exit-code 1 \
       #       --severity CRITICAL,HIGH \
       #       --ignore-unfixed \
-      #       ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}:${IMAGE_TAG}
+      #       ${{ env.DOCKERHUB_REPO }}
 
-            
-      # # Create an issue if the build fails
-      # - name: Create issue if build fails
-      #   if: failure()
-      #   uses: peter-evans/create-issue-from-file@v2
-      #   with:
-      #     title: "Docker Image CI failed for ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}:${{ matrix.branch }}-${{ matrix.platform }}"
-      #     content-filepath: .github/issue_templates/build_failure.md
-      #     token: ${{ secrets.GITHUB_TOKEN }}
