@@ -10,17 +10,20 @@ services:
       - uptime-kuma:/app/data
   api:
     build: .
+    # image: medaziz11/uptimekuma_restapi:1.2
     volumes:
-      - ./db:/db
+      - ./db:/db:rwx
     restart: always
     environment:
       - KUMA_SERVER=${KUMA_SERVER:-http://kuma:3001}
-      - KUMA_USERNAME=${KUMA_USERNAME:-admin}
-      - KUMA_PASSWORD=${KUMA_PASSWORD:-passwordSafe1*}
+      - KUMA_USERNAME=${KUMA_USERNAME:-test}
+      - KUMA_PASSWORD=${KUMA_PASSWORD:-123test.}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-      - ACCESS_TOKEN_EXPIRATION=${ACCESS_TOKEN_EXPIRATION:-1}
+      # - ACCESS_TOKEN_EXPIRATION=${ACCESS_TOKEN_EXPIRATION:-1}
+      - SECRET_KEY=${SECRET_KEY:-pO8WunLtrznm2i4NfOJ25BkG4sh4kYwN1FjzZp8O6E0} #random 32bit string that's url safe.
     ports:
       - "8000:8000"
 
 volumes:
   uptime-kuma:
+  api-db:

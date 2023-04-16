@@ -16,7 +16,7 @@ from routers import (
     settings,
     maintenance,
 )
-from config import settings as app_settings
+from config import settings as app_settings, logger
 from app_setup import initialize_app
 
 app = FastAPI(title=app_settings.PROJECT_NAME)
@@ -39,6 +39,7 @@ app.include_router(auth.router, prefix="/login", tags=["Authentication"])
 @app.on_event("startup")
 async def startup_event():
     await initialize_app(app)
+    logger.info("KumaAPI started...")
 
 
 @app.get("/", include_in_schema=False)
