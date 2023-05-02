@@ -12,7 +12,7 @@ services:
     build: .
     # image: medaziz11/uptimekuma_restapi:1.2
     volumes:
-      - ./db:/db:rwx
+      - api-db:/db:rwx
     restart: always
     environment:
       - KUMA_SERVER=${KUMA_SERVER:-http://kuma:3001}
