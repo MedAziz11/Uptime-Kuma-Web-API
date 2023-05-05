@@ -59,7 +59,7 @@ api:
   container_name: backend
   image: medaziz11/uptimekuma_restapi
   volumes:
-    - ./db:/db
+    - ./db:/db:rwx
   restart: always
   environment:
     - KUMA_SERVER=http://kuma:3001
