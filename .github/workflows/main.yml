@@ -70,7 +70,7 @@ jobs:
             exit 1
           fi
 
-          echo "::set-output name=tags::${TAGS}"
+          echo ""{tags}=${TAGS}" >> $GITHUB_TAGS"
 
       # Build, test, and push the Docker image
       - name: Build, Test, and Push Docker image
