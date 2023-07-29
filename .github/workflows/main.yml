@@ -16,6 +16,7 @@ on:
 env:
   DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'medaziz11' }}
   DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'uptimekuma_restapi' }}
+  BUILD_TAGS: ${{ vars.BUILD_TAGS }}
   CACHE_PATH: /tmp/.buildx-cache
 
 jobs:
@@ -69,8 +70,8 @@ jobs:
             echo "Error: Unexpected branch or tag"
             exit 1
           fi
-
-          echo ""{tags}=${TAGS}" >> $GITHUB_TAGS"
+          echo ""{tags}={${TAGS}}"
+          echo ""{tags}={${TAGS}}" >> $GITHUB_OUTPUT"
 
       # Build, test, and push the Docker image
       - name: Build, Test, and Push Docker image
