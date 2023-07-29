@@ -15,12 +15,19 @@
 
 ### Environment Variables :
 
+#### Required
 You have to define these ENV VARS in order to connect to your KUMA server.
 
-        KUMA_SERVER=<your_kuma_server>
-        KUMA_USERNAME=<your_kuma_username>
-        KUMA_PASSWORD=<your_kuma_password>
-        ADMIN_PASSWORD=<your admin password so you can connect with via the api>
+    KUMA_SERVER: The URL of your Uptime Kuma instance. ex: https://uptime.example.com
+    KUMA_USERNAME: The username of your Uptime Kuma user
+    KUMA_PASSWORD: The password of your Uptime Kuma user
+    ADMIN_PASSWORD: An admin password to access the API
+
+#### Optional
+Additional configuration variables available
+
+    ACCESS_TOKEN_EXPIRATION: Minutes the access token should be valid. Defaults to 8 days.
+    SECRET_KEY: A secret value to encode JWTs with
 
 #### Note:
 
@@ -46,33 +53,34 @@ You can simply create a docker compose file like this :
 ```yaml
 version: "3.9"
 services:
-kuma:
-  container_name: uptime-kuma
-  image: louislam/uptime-kuma:latest
-  ports:
-    - "3001:3001"
-  restart: always
-  volumes:
-    - uptime-kuma:/app/data
+  kuma:
+    container_name: uptime-kuma
+    image: louislam/uptime-kuma:latest
+    ports:
+      - "3001:3001"
+    restart: always
+    volumes:
+      - uptime-kuma:/app/data
 
-api:
-  container_name: backend
-  image: medaziz11/uptimekuma_restapi
-  volumes:
-    - ./db:/db:rwx
-  restart: always
-  environment:
-    - KUMA_SERVER=http://kuma:3001
-    - KUMA_USERNAME=test
-    - KUMA_PASSWORD=123test.
-    - ADMIN_PASSWORD=admin
-  depends_on:
-    - kuma
-  ports:
-    - "8000:8000"
+  api:
+    container_name: backend
+    image: medaziz11/uptimekuma_restapi
+    volumes:
+      - api:/db
+    restart: always
+    environment:
+      - KUMA_SERVER=http://kuma:3001
+      - KUMA_USERNAME=test
+      - KUMA_PASSWORD=123test.
+      - ADMIN_PASSWORD=admin
+    depends_on:
+      - kuma
+    ports:
+      - "8000:8000"
 
 volumes:
-uptime-kuma:
+  uptime-kuma:
+  api:
 ```
 
 ### In order for the example to work: You have to run kuma first then create your kuma username and password then re-run the compose file.

@@ -38,6 +38,10 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup -s /bin/sh
 # Copy Python packages and the virtual environment from the builder stage
 COPY --from=builder --chown=appuser:appgroup /app /app
 
+# Create /db directory to prevent permission issues
+RUN mkdir /db && \
+    chown appuser:appgroup /db
+
 # Set the working directory to /app
 WORKDIR /app
 
