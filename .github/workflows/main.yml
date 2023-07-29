@@ -70,8 +70,8 @@ jobs:
             echo "Error: Unexpected branch or tag"
             exit 1
           fi
-          echo ""{tags}={${TAGS}}""
-          echo ""{tags}={${TAGS}}" >> $GITHUB_OUTPUT"
+          
+          echo "{tags}=${TAGS}" >> $GITHUB_OUTPUT
 
       # Build, test, and push the Docker image
       - name: Build, Test, and Push Docker image
