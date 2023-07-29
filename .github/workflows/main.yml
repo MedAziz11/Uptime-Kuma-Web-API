@@ -81,7 +81,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.image_tags.outputs.tags }}
+          tag: ${{ steps.image_tags.output.tags }}
           cache-from: type=local,src=${{ env.CACHE_PATH }}
           cache-to: type=local,dest=${{ env.CACHE_PATH }}
 
