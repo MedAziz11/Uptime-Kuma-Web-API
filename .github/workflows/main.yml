@@ -71,7 +71,7 @@ jobs:
           fi
           
           echo "{tags}=${TAGS}" >> $GITHUB_OUTPUT
-          echo ${{ GITHUB_OUTPUT }}
+          echo ${{ steps.image_tags.outputs }}
 
       # Build, test, and push the Docker image
       - name: Build, Test, and Push Docker image
