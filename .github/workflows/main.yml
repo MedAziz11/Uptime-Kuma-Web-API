@@ -70,8 +70,9 @@ jobs:
             echo "Error: Unexpected branch or tag"
             exit 1
           fi
-          echo "{tags}=${TAGS}"
+          
           echo "{tags}=${TAGS}" >> $GITHUB_OUTPUT
+          echo $GITHUB_OUTPUT
 
       # Build, test, and push the Docker image
       - name: Build, Test, and Push Docker image
@@ -80,7 +81,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.image_tags.outputs.tags }}
+          tags: $GITHUB_OUTPUT.tags
           cache-from: type=local,src=${{ env.CACHE_PATH }}
           cache-to: type=local,dest=${{ env.CACHE_PATH }}
 
