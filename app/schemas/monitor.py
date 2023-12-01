@@ -8,12 +8,17 @@ from uptime_kuma_api import MonitorType, AuthMethod
 class Monitor(BaseModel):
     type: MonitorType
     name: str
+    description: str
     interval: int = 60
     retryInterval: int = 60
     resendInterval: int = 0
     maxretries: int = 0
     upsideDown: bool = False
     notificationIDList: Optional[List] = None
+
+    # HTTP JSON-QUERY
+    expectedValue: Optional[str] = None
+    jsonPath: Optional[str] = None
 
     # HTTP KEYWORD
     url: Optional[str] = None
