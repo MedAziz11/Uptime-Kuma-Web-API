@@ -12,7 +12,7 @@ from models.user import UserCreate, UserResponse
 from config import settings, logger as logging
 from utils import security
 
-oauth2_token = OAuth2PasswordBearer(tokenUrl="/login/access-token/")
+oauth2_token = OAuth2PasswordBearer(tokenUrl="/login/access-token")
 
 
 async def get_current_user(token: str = Depends(oauth2_token)):
