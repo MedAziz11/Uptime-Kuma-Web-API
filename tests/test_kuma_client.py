@@ -20,6 +20,8 @@ class FakeApi:
         if FakeApi.connect_error:
             raise FakeApi.connect_error
         self.url = url
+        self.timeout = timeout
+        self.stats = {1: {"valid": True}}
         self.sio = SimpleNamespace(connected=True)
         self.logged_in = False
         self.side_effects: list[Exception] = []
@@ -42,6 +44,17 @@ class FakeApi:
     def add_monitor(self, **kwargs):
         raise TypeError("unknown argument 'foo'")
 
+    def add_tag(self, **kwargs):
+        return kwargs
+
+    def cert_info(self):
+        self.timeout_during_call = self.timeout
+        if self.side_effects:
+            raise self.side_effects.pop(0)
+        return self.stats
+
+    avg_ping = uptime = cert_info
+
 
 @pytest.fixture
 def client(settings, monkeypatch) -> KumaClient:
@@ -59,6 +72,11 @@ def test_connects_lazily_logs_in_and_reuses_the_connection(client):
     api = FakeApi.instances[0]
     assert api.url == "http://kuma.invalid:3001"  # trailing slash stripped
     assert api.credentials == ("kuma-user", "kuma-password")
+
+
+def test_options_named_like_internal_parameters_are_forwarded(client):
+    options = {"name": "prod", "args": 2, "kwargs": 3}
+    assert client.add_tag(**options) == options
 
 
 def test_only_public_api_methods_are_exposed(client):
@@ -129,3 +147,27 @@ def test_close_disconnects(client):
     client.close()
     assert FakeApi.instances[0].sio.connected is False
     client.close()  # idempotent
+
+
+def test_monitor_stats(client):
+    assert client.monitor_stats("cert_info") == {1: {"valid": True}}
+    api = FakeApi.instances[0]
+    # Waits briefly for pushed data, then restores the configured timeout.
+    assert api.timeout_during_call == 2
+    assert api.timeout == 10
+
+    # No monitor at all: the library returns a list.
+    api.stats = []
+    assert client.monitor_stats("uptime") == {}
+
+    # Nothing was ever pushed (e.g. no HTTPS monitor): "no data", not an error.
+    api.side_effects = [Timeout("Timed out while waiting for event Event.CERT_INFO")]
+    assert client.monitor_stats("cert_info") == {}
+    assert api.timeout == 10
+
+    api.side_effects = [socketio.exceptions.BadNamespaceError("/")]
+    with pytest.raises(KumaUnavailableError):
+        client.monitor_stats("avg_ping")
+
+    with pytest.raises(AttributeError):
+        client.monitor_stats("delete_monitor")

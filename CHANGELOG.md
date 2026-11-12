@@ -34,6 +34,9 @@
 - `GET /statuspages` failed when a status page had a domain name (validated as a URL).
 - The default maintenance `dateRange` was frozen at the date the server started.
 - Login no longer logs at `FATAL` level on every call.
+- `/cert_info`, `/ping` and `/uptime` return `{}` when Uptime Kuma has no data (e.g. no HTTPS
+  monitor) instead of failing after a timeout.
+- Unknown ids return `404` even where Uptime Kuma answers with a raw JavaScript or SQL error.
 - A deleted user's token stops working immediately.
 
 ### Added

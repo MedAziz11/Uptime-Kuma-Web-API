@@ -21,6 +21,8 @@ from app.config import Settings
 logger = logging.getLogger(__name__)
 
 _NOT_LOGGED_IN = "not logged in"
+_MONITOR_STATS = frozenset({"cert_info", "avg_ping", "uptime"})
+_STATS_WAIT = 2.0  # seconds
 
 
 class KumaUnavailableError(Exception):
@@ -52,7 +54,8 @@ class KumaClient:
         method.__name__ = name
         return method
 
-    def call(self, name: str, *args: Any, **kwargs: Any) -> Any:
+    def call(self, name: str, /, *args: Any, **kwargs: Any) -> Any:
+        # `name` is positional-only: Kuma options are often called `name` too.
         with self._lock:
             try:
                 return self._invoke(name, args, kwargs)
@@ -65,6 +68,30 @@ class KumaClient:
                 except _ConnectionLostError as exc:
                     self._disconnect()
                     raise KumaUnavailableError("lost the connection to Uptime Kuma") from exc
+
+    def monitor_stats(self, name: str) -> dict[Any, Any]:
+        """Per-monitor statistics that Uptime Kuma pushes on its own (`cert_info`,
+        `avg_ping`, `uptime`).
+
+        The library waits for the first push, which never comes when there is
+        nothing to report (e.g. `cert_info` without any HTTPS monitor). Wait
+        briefly instead of the whole timeout and report "no data" as `{}`.
+        """
+        if name not in _MONITOR_STATS:
+            raise AttributeError(name)
+        with self._lock:
+            api = self._connect()
+            timeout = api.timeout
+            api.timeout = min(timeout, _STATS_WAIT)
+            try:
+                return self._invoke(name, (), {}) or {}
+            except KumaTimeoutError:
+                return {}
+            except _ConnectionLostError as exc:
+                self._disconnect()
+                raise KumaUnavailableError("lost the connection to Uptime Kuma") from exc
+            finally:
+                api.timeout = timeout
 
     def close(self) -> None:
         with self._lock:

@@ -10,6 +10,12 @@ from app.kuma import KumaInvalidRequestError, KumaTimeoutError, KumaUnavailableE
 logger = logging.getLogger(__name__)
 
 _NOT_FOUND = re.compile(r"does not exist|not found|no .*found", re.IGNORECASE)
+# How Uptime Kuma 1.23 answers for an unknown id on some events: a raw JavaScript
+# or SQL error. These are reported as a plain "Not found".
+_NOT_FOUND_RAW = re.compile(
+    r"Cannot read properties of null|No slug\?|You do not own this|FOREIGN KEY constraint failed",
+    re.IGNORECASE,
+)
 
 
 def _error(status_code: int, detail: str) -> JSONResponse:
@@ -21,6 +27,8 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def kuma_error(request: Request, exc: UptimeKumaException) -> JSONResponse:
         detail = str(exc) or "Uptime Kuma returned an error"
         logger.info("%s %s: %s", request.method, request.url.path, detail)
+        if _NOT_FOUND_RAW.search(detail):
+            return _error(404, "Not found")
         return _error(404 if _NOT_FOUND.search(detail) else 400, detail)
 
     @app.exception_handler(KumaInvalidRequestError)

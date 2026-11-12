@@ -9,4 +9,4 @@ router = APIRouter()
 
 @router.get("", summary="Get the uptime of each monitor")
 def get_uptime(kuma: Kuma) -> dict[Any, Any]:
-    return kuma.uptime()
+    return kuma.monitor_stats("uptime")

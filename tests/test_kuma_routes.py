@@ -209,6 +209,20 @@ def test_upload_backup(client, kuma, auth):
     ("error", "status", "detail"),
     [
         (UptimeKumaException("monitor does not exist"), 404, "monitor does not exist"),
+        (UptimeKumaException("Maintenance not found"), 404, "Maintenance not found"),
+        # Raw errors Uptime Kuma 1.23 returns for unknown ids.
+        (
+            UptimeKumaException("Cannot read properties of null (reading 'toJSON')"),
+            404,
+            "Not found",
+        ),
+        (UptimeKumaException("No slug?"), 404, "Not found"),
+        (UptimeKumaException("You do not own this monitor."), 404, "Not found"),
+        (
+            UptimeKumaException("INSERT INTO monitor_tag ... FOREIGN KEY constraint failed"),
+            404,
+            "Not found",
+        ),
         (UptimeKumaException("Incorrect something"), 400, "Incorrect something"),
         (KumaInvalidRequestError("unknown argument 'foo'"), 422, "unknown argument 'foo'"),
         (KumaTimeoutError("slow"), 504, "Uptime Kuma did not answer in time"),

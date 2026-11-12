@@ -30,6 +30,9 @@ class FakeKuma:
 
         return method
 
+    def monitor_stats(self, name: str) -> Any:
+        return getattr(self, name)()
+
     def close(self) -> None:
         pass
 

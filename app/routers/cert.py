@@ -9,4 +9,4 @@ router = APIRouter()
 
 @router.get("", summary="Get certificate info")
 def get_cert_info(kuma: Kuma) -> dict[Any, Any]:
-    return kuma.cert_info()
+    return kuma.monitor_stats("cert_info")
