@@ -8,6 +8,6 @@ tortoise-orm==1.1.9
 bcrypt==5.0.0
 PyJWT==2.15.1
 # Used by `requests` (a dependency of uptime-kuma-api) for charset detection.
-charset-normalizer>=3,<4
+charset-normalizer>=3.5.2,<4
 # Time zone database for tortoise-orm; not shipped with Windows or Alpine.
 tzdata==2026.6
