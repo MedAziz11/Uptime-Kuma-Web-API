@@ -4,7 +4,8 @@ A REST API wrapper for [Uptime Kuma](https://github.com/louislam/uptime-kuma), b
 [FastAPI](https://fastapi.tiangolo.com/) on top of
 [uptime-kuma-api](https://github.com/lucasheld/uptime-kuma-api).
 
-[![CI](https://github.com/MedAziz11/Uptime-Kuma-Web-API/actions/workflows/main.yml/badge.svg)](https://github.com/MedAziz11/Uptime-Kuma-Web-API/actions/workflows/main.yml)
+[![CI](https://github.com/MedAziz11/Uptime-Kuma-Web-API/actions/workflows/ci.yml/badge.svg)](https://github.com/MedAziz11/Uptime-Kuma-Web-API/actions/workflows/ci.yml)
+[![Docker pulls](https://img.shields.io/docker/pulls/medaziz11/uptimekuma_restapi)](https://hub.docker.com/r/medaziz11/uptimekuma_restapi)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Compatibility
@@ -14,8 +15,7 @@ A REST API wrapper for [Uptime Kuma](https://github.com/louislam/uptime-kuma), b
 | Uptime Kuma | 1.21.3 – 1.23.x    |
 | Python      | 3.11+              |
 
-`uptime-kuma-api` 1.2.1 officially supports Uptime Kuma 1.21.3 – 1.23.2; later 1.23.x patch releases
-are expected to work. Uptime Kuma 2.x is **not** supported: `uptime-kuma-api` has no release for it.
+CI runs the end-to-end tests against Uptime Kuma 1.21.3, 1.23.2 and the latest 1.x release. Uptime Kuma 2.x is **not** supported: `uptime-kuma-api` has no release for it.
 
 ## Features
 
@@ -75,6 +75,15 @@ create the Kuma user named in `.env`. The API connects to Uptime Kuma on the fir
 restart is needed afterwards.
 
 Then open <http://localhost:8000/docs> and log in as `admin` with your `ADMIN_PASSWORD`.
+
+### Image tags
+
+| Tag                    | Content                    |
+| ---------------------- | -------------------------- |
+| `latest`               | the latest release         |
+| `v2.0.0`, `v2.0`, `v2` | a specific release / line  |
+| `edge`                 | the tip of `main`          |
+| `dev`                  | the tip of `develop`       |
 
 ## Configuration
 
@@ -149,16 +158,21 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 
-make run      # uvicorn with auto-reload (reads .env)
-make lint     # ruff
-make test     # pytest (Uptime Kuma is mocked, no server needed)
-make up       # full stack with docker compose
-make e2e      # curl scripts against the running stack
+make run       # uvicorn with auto-reload (reads .env)
+make lint      # ruff
+make test      # unit and integration tests, no Uptime Kuma needed
+make coverage  # same, with the coverage report
+make e2e       # end-to-end tests against a real Uptime Kuma in Docker
+make up        # full stack with docker compose
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout, how to add an endpoint and how to
+release, and [SECURITY.md](SECURITY.md) for reporting vulnerabilities and deployment notes.
 
 ## Upgrading from 1.x
 
-See the [changelog](CHANGELOG.md) for the breaking changes in 2.0.
+2.0 has breaking changes. Read the [2.0.0 release notes](docs/releases/v2.0.0.md) for the upgrade
+steps; the [changelog](CHANGELOG.md) has the full list.
 
 ## License
 

@@ -1,0 +1,31 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: The request you sent, what you expected and what you got (status code and body).
+    validations:
+      required: true
+  - type: input
+    id: api-version
+    attributes:
+      label: API version
+      description: The image tag, or the `version` returned by `GET /health`.
+    validations:
+      required: true
+  - type: input
+    id: kuma-version
+    attributes:
+      label: Uptime Kuma version
+      description: Supported versions are 1.21.3 - 1.23.x.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: API logs
+      description: Output of `docker compose logs api` around the failing request. Remove secrets.
+      render: text

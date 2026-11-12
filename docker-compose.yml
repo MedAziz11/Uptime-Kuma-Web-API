@@ -1,7 +1,7 @@
 services:
   kuma:
     container_name: uptime-kuma
-    image: louislam/uptime-kuma:1
+    image: louislam/uptime-kuma:${KUMA_VERSION:-1}
     ports:
       - "3001:3001"
     restart: always

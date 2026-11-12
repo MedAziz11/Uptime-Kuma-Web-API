@@ -1,0 +1,15 @@
+name: Feature request
+description: A new endpoint or behaviour
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you need?
+      description: What you are trying to do, and which Uptime Kuma feature it relates to.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed endpoint or change

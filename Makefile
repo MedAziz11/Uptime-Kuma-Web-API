@@ -1,4 +1,4 @@
-.PHONY: up down setup run lint format test e2e
+.PHONY: up down setup run lint format test coverage e2e
 
 up: down
 	docker compose up --build
@@ -25,8 +25,14 @@ format:
 test:
 	pytest
 
-# Needs the stack running (make up), jq, and ADMIN_PASSWORD in the environment.
+coverage:
+	pytest --cov --cov-report=term --cov-report=html
+
+# End-to-end tests against a real Uptime Kuma. Needs Docker and a .env file
+# (KUMA_USERNAME, KUMA_PASSWORD, ADMIN_PASSWORD). Removes the stack and its volumes afterwards.
 e2e:
-	bash tests/e2e/monitor.sh
-	bash tests/e2e/maintenance.sh
-	bash tests/e2e/statuspage.sh
+	docker compose up -d --build --wait
+	set -a && . ./.env && set +a && \
+	python tests/e2e/setup_kuma.py http://127.0.0.1:3001 && \
+	E2E_API_URL=http://127.0.0.1:8000 E2E_ADMIN_PASSWORD="$$ADMIN_PASSWORD" pytest tests/e2e; \
+	status=$$?; docker compose down -v; exit $$status

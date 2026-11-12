@@ -82,6 +82,12 @@ def test_maintenance(client, kuma, auth):
     kuma.results["get_maintenances"] = [{"id": 1}]
     assert client.get("/maintenance", headers=auth).json() == {"maintenances": [{"id": 1}]}
 
+    kuma.results["get_maintenance"] = {"id": 1, "title": "upgrade"}
+    assert client.get("/maintenance/1", headers=auth).json() == {
+        "maintenance": {"id": 1, "title": "upgrade"}
+    }
+    assert kuma.last_call == ("get_maintenance", (1,), {})
+
     resp = client.patch("/maintenance/1", json={"active": False}, headers=auth)
     assert resp.json()["maintenance_data"] == {"active": False}
     assert kuma.last_call == ("edit_maintenance", (1,), {"active": False})

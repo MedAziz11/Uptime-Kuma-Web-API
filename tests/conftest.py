@@ -10,6 +10,15 @@ from app.main import create_app
 ADMIN_PASSWORD = "admin-password"
 
 
+@pytest.fixture(autouse=True)
+def _fast_password_hashing(monkeypatch) -> None:
+    """bcrypt's default cost makes every login take ~0.3 s; use the minimum in tests."""
+    import bcrypt
+
+    real_gensalt = bcrypt.gensalt
+    monkeypatch.setattr(bcrypt, "gensalt", lambda rounds=4, prefix=b"2b": real_gensalt(4, prefix))
+
+
 class FakeKuma:
     """Stands in for `KumaClient`: records calls and returns canned results."""
 

@@ -4,7 +4,11 @@ description = "A REST API wrapper for Uptime Kuma"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
-dynamic = ["version"]
+version = "2.0.0"
+
+[project.urls]
+Repository = "https://github.com/MedAziz11/Uptime-Kuma-Web-API"
+Changelog = "https://github.com/MedAziz11/Uptime-Kuma-Web-API/blob/main/CHANGELOG.md"
 
 [tool.ruff]
 line-length = 100
@@ -23,4 +27,14 @@ ignore = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = ["e2e: needs a running stack (see tests/e2e/README.md)"]
 filterwarnings = ["error", "ignore::DeprecationWarning", "ignore::ResourceWarning"]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = true

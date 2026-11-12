@@ -1,6 +1,12 @@
 # Changelog
 
-## 2.0.0
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
+[Semantic Versioning](https://semver.org/).
+
+## [2.0.0] - unreleased
+
+Upgrade guide: [docs/releases/v2.0.0.md](docs/releases/v2.0.0.md).
 
 ### Breaking changes
 
@@ -21,6 +27,8 @@
 - **Create/update bodies** forward only the fields you send; everything else keeps the Uptime Kuma
   default. 1.x sent its own defaults (e.g. `port: 53` on every monitor).
 - **Timestamps** in `/users` responses are timezone-aware (UTC).
+- **Docker tags**: `latest` is now the latest release; the tip of `main` is published as `edge`.
+  Releases are also tagged `vX.Y` and `vX`.
 - For developers: `app` is a package; run it with `uvicorn app.main:create_app --factory`.
 
 ### Fixed
@@ -47,7 +55,13 @@
   cron-based maintenances.
 - Settings: `KUMA_TIMEOUT`, `KUMA_SSL_VERIFY`, `DB_PATH`, `LOG_LEVEL`; `BACKEND_CORS_ORIGINS` is now
   applied.
-- Test suite (pytest), ruff linting, CI test job, Dependabot, Docker health check.
+- Tests: unit tests (100 % coverage, CI fails under 95 %), an integration test of the real
+  `uptime-kuma-api` client against a stand-in Socket.IO server, and end-to-end tests against
+  Uptime Kuma 1.21.3, 1.23.2 and the latest 1.x.
+- CI: lint, unit tests on Python 3.11–3.13, end-to-end tests, multi-arch image build; CodeQL;
+  Dependabot; a tag-driven release workflow (Docker image + GitHub release).
+- Docker health check; `KUMA_VERSION` selects the Uptime Kuma image in `docker-compose.yml`.
+- `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, release notes.
 - MIT license.
 
 ### Changed
@@ -58,5 +72,9 @@
 
 ### Removed
 
-- The manual release workflow (its action reference was invalid), `diff.txt`, the outdated endpoint
-  screenshots.
+- The manual release workflow (its action reference was invalid) and the automatic tag-on-merge
+  workflow, both replaced by `release.yml`.
+- `diff.txt`, the outdated endpoint screenshots, and the curl test scripts (replaced by
+  `tests/e2e`).
+
+[2.0.0]: https://github.com/MedAziz11/Uptime-Kuma-Web-API/compare/v1.2.1...v2.0.0

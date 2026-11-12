@@ -171,3 +171,43 @@ def test_monitor_stats(client):
 
     with pytest.raises(AttributeError):
         client.monitor_stats("delete_monitor")
+
+
+def test_gives_up_after_one_retry(client):
+    client.get_monitors()
+    lost = socketio.exceptions.BadNamespaceError("/")
+    FakeApi.instances[0].side_effects = [lost]
+    # The replacement connection fails the same way: no endless retry loop.
+    original_init = FakeApi.__init__
+
+    def failing_init(self, *args, **kwargs):
+        original_init(self, *args, **kwargs)
+        self.side_effects = [lost]
+
+    FakeApi.__init__ = failing_init
+    try:
+        with pytest.raises(KumaUnavailableError, match="lost the connection"):
+            client.get_monitors()
+    finally:
+        FakeApi.__init__ = original_init
+    assert len(FakeApi.instances) == 2
+    assert all(not api.sio.connected for api in FakeApi.instances)
+
+    assert client.get_monitors() == [{"id": 1, "api": 3}]
+
+
+def test_login_timeout_is_reported_as_unavailable(client):
+    FakeApi.login_error = Timeout("no answer")
+    with pytest.raises(KumaUnavailableError, match="unable to log in"):
+        client.get_monitors()
+
+
+def test_errors_while_disconnecting_are_ignored(client, monkeypatch):
+    client.get_monitors()
+
+    def broken_disconnect(self):
+        raise RuntimeError("socket already gone")
+
+    monkeypatch.setattr(FakeApi, "disconnect", broken_disconnect)
+    client.close()
+    assert client.get_monitors() == [{"id": 1, "api": 2}]
