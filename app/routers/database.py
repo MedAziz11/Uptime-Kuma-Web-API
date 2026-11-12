@@ -1,30 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
-from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
+from typing import Any
 
-from config import logger as logging
-from schemas.api import API
-from utils.deps import get_current_user
- 
-router = APIRouter(redirect_slashes=True)
+from fastapi import APIRouter
 
+from app.deps import Kuma
 
-@router.get("/size", description="Get DataBase Size")
-async def get_db_size(cur_user: API = Depends(get_current_user)):
-    api : UptimeKumaApi = cur_user['api']
-    try:
-        resp = api.get_database_size()
-        return {**resp, "unit": "octet"}
-    except Exception as e:
-        logging.fatal(e)
-        raise HTTPException(500, str(e))
+router = APIRouter()
 
 
-@router.post("/shrink", description="Shrink DataBase")
-async def shrink_db(cur_user: API = Depends(get_current_user)):
-    api : UptimeKumaApi = cur_user['api']
-    try:
-        resp = api.shrink_database()
-        return {"message": "DB Shrinked" , "details": resp}
-    except Exception as e:
-        logging.fatal(e)
-        raise HTTPException(500, str(e))
+@router.get("/size", summary="Get the Uptime Kuma database size")
+def get_db_size(kuma: Kuma) -> dict[str, Any]:
+    return {**kuma.get_database_size(), "unit": "octet"}
+
+
+@router.post("/shrink", summary="Shrink the Uptime Kuma database")
+def shrink_db(kuma: Kuma) -> dict[str, Any]:
+    return {"message": "DB Shrinked", "details": kuma.shrink_database()}

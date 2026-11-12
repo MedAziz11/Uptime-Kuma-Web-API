@@ -1,0 +1,113 @@
+name: Release
+
+# Publishes a release when a version tag is pushed:
+#   git tag v2.0.0 && git push origin v2.0.0
+# See CONTRIBUTING.md for the full checklist.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+env:
+  DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'medaziz11' }}
+  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'uptimekuma_restapi' }}
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: The tag must match the version in the code
+        run: |
+          VERSION="$(python -c 'import app; print(app.__version__)')"
+          if [[ "$GITHUB_REF_NAME" != "v${VERSION}" ]]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match app.__version__ (${VERSION})"
+            exit 1
+          fi
+
+      - name: Lint and test
+        run: |
+          ruff check app tests
+          ruff format --check app tests
+          pytest --cov
+
+  image:
+    name: Docker image
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # v2.0.0 -> v2.0.0, v2.0, v2 and latest (pre-releases such as v2.1.0-rc.1 only get their own tag)
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}},prefix=v
+            type=semver,pattern={{major}}.{{minor}},prefix=v
+            type=semver,pattern={{major}},prefix=v
+
+      - name: Build and push the multi-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  github-release:
+    name: GitHub release
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Uses docs/releases/<tag>.md when it exists, generated notes otherwise.
+      - name: Pick the release notes
+        id: notes
+        run: |
+          FILE="docs/releases/${GITHUB_REF_NAME}.md"
+          if [[ -f "$FILE" ]]; then
+            echo "file=${FILE}" >> "$GITHUB_OUTPUT"
+            echo "generate=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "file=" >> "$GITHUB_OUTPUT"
+            echo "generate=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: ${{ steps.notes.outputs.file }}
+          generate_release_notes: ${{ steps.notes.outputs.generate }}
+          prerelease: ${{ contains(github.ref_name, '-') }}

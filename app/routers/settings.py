@@ -1,19 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
-from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
+from typing import Any
 
-from config import logger as logging
-from schemas.api import API
-from schemas.settings import Backup,  ImportHandleType
-from utils.deps import get_current_user
- 
-router = APIRouter(redirect_slashes=True)
+from fastapi import APIRouter
+
+from app.deps import Kuma
+from app.schemas.settings import Backup, ImportHandleType
+
+router = APIRouter()
 
 
-@router.post("/upload_backup", description="Upload a Backup")
-async def upload_backup(backup: Backup, import_handle: ImportHandleType, cur_user: API = Depends(get_current_user)):
-    api : UptimeKumaApi = cur_user['api']
-    try :
-        return api.upload_backup(backup.json(), import_handle)
-    except Exception as e:
-        logging.fatal(e)
-        raise HTTPException(500, str(e))
+@router.post("/upload_backup", summary="Import a backup")
+def upload_backup(
+    backup: Backup, kuma: Kuma, import_handle: ImportHandleType = ImportHandleType.SKIP
+) -> dict[str, Any]:
+    return kuma.upload_backup(backup.model_dump_json(exclude_unset=True), import_handle.value)

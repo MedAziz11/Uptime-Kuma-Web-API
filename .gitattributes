@@ -1,0 +1,2 @@
+# Keep LF line endings in the working tree on every platform (Dockerfile, Makefile, shell).
+* text=auto eol=lf

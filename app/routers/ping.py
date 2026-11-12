@@ -1,18 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
-from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
+from typing import Any
 
-from config import logger as logging
-from schemas.api import API
-from utils.deps import get_current_user
- 
-router = APIRouter(redirect_slashes=True)
+from fastapi import APIRouter
+
+from app.deps import Kuma
+
+router = APIRouter()
 
 
-@router.get("", description="Get AVG Ping")
-async def get_avg_ping(cur_user: API = Depends(get_current_user)):
-    api : UptimeKumaApi = cur_user['api']
-    try:
-        return api.avg_ping()
-    except Exception as e:
-        logging.fatal(e)
-        raise HTTPException(500, str(e))
+@router.get("", summary="Get the average ping of each monitor")
+def get_avg_ping(kuma: Kuma) -> dict[Any, Any]:
+    return kuma.monitor_stats("avg_ping")

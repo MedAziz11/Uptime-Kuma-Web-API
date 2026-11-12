@@ -1,79 +1,94 @@
-from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from uptime_kuma_api import AuthMethod, MonitorType
 
 
-from uptime_kuma_api import MonitorType, AuthMethod
+class MonitorUpdate(BaseModel):
+    """Monitor settings.
 
+    Only the fields sent in the request are forwarded to Uptime Kuma; the rest
+    keep the Uptime Kuma defaults (on creation) or their current value (on
+    update). Monitor options not listed here are accepted and passed through.
+    """
 
-class Monitor(BaseModel):
-    type: MonitorType
-    name: str
-    interval: int = 60
-    retryInterval: int = 60
-    resendInterval: int = 0
-    maxretries: int = 0
-    upsideDown: bool = False
-    notificationIDList: Optional[List] = None
+    model_config = ConfigDict(extra="allow", use_enum_values=True)
 
-    # HTTP KEYWORD
-    url: Optional[str] = None
-    expiryNotification: bool = False
-    ignoreTls: bool = False
-    maxredirects: int = 10
-    accepted_statuscodes: Optional[List] = None
-    proxyId: Optional[int] = None
-    method: str = "GET"
-    body: Optional[str] = None
-    headers: Optional[str] = None
-    authMethod: AuthMethod = AuthMethod.NONE
-    basic_auth_user: Optional[str] = None
-    basic_auth_pass: Optional[str] = None
-    authDomain: Optional[str] = None
-    authWorkstation: Optional[str] = None
+    type: MonitorType | None = None
+    name: str | None = None
+    parent: int | None = None
+    description: str | None = None
+    interval: int | None = None
+    retryInterval: int | None = None
+    resendInterval: int | None = None
+    maxretries: int | None = None
+    upsideDown: bool | None = None
+    notificationIDList: list[int] | None = None
+    timeout: int | None = None
+
+    # HTTP, KEYWORD, JSON_QUERY
+    url: str | None = None
+    expiryNotification: bool | None = None
+    ignoreTls: bool | None = None
+    maxredirects: int | None = None
+    accepted_statuscodes: list[str] | None = None
+    proxyId: int | None = None
+    method: str | None = None
+    httpBodyEncoding: str | None = None
+    body: str | None = None
+    headers: str | None = None
+    authMethod: AuthMethod | None = None
+    basic_auth_user: str | None = None
+    basic_auth_pass: str | None = None
+    authDomain: str | None = None
+    authWorkstation: str | None = None
 
     # KEYWORD
-    keyword: Optional[str] = None
+    keyword: str | None = None
+    invertKeyword: bool | None = None
 
-    # DNS PING STEAM MQTT
-    hostname: Optional[str] = None
+    # JSON_QUERY
+    jsonPath: str | None = None
+    expectedValue: str | None = None
 
-    # DNS STEAM MQTT
-    port: int = 53
+    # DNS, PING, STEAM, MQTT, PORT, RADIUS
+    hostname: str | None = None
+    port: int | None = None
+    packetSize: int | None = None
 
     # DNS
-    dns_resolve_server: str = "1.1.1.1"
-    dns_resolve_type: str = "A"
+    dns_resolve_server: str | None = None
+    dns_resolve_type: str | None = None
 
     # MQTT
-    mqttUsername: Optional[str] = None
-    mqttPassword: Optional[str] = None
-    mqttTopic: Optional[str] = None
-    mqttSuccessMessage: Optional[str] = None
+    mqttUsername: str | None = None
+    mqttPassword: str | None = None
+    mqttTopic: str | None = None
+    mqttSuccessMessage: str | None = None
 
-    # SQLSERVER POSTGRES
-    databaseConnectionString: Optional[str] = None
-    databaseQuery: Optional[str] = None
+    # SQLSERVER, POSTGRES, MYSQL, MONGODB, REDIS
+    databaseConnectionString: str | None = None
+    databaseQuery: str | None = None
 
     # DOCKER
-    docker_container: str = ""
-    docker_host: Optional[int] = None
+    docker_container: str | None = None
+    docker_host: int | None = None
 
     # RADIUS
-    radiusUsername: Optional[str] = None
-    radiusPassword: Optional[str] = None
-    radiusSecret: Optional[str] = None
-    radiusCalledStationId: Optional[str] = None
-    radiusCallingStationId: Optional[str] = None
+    radiusUsername: str | None = None
+    radiusPassword: str | None = None
+    radiusSecret: str | None = None
+    radiusCalledStationId: str | None = None
+    radiusCallingStationId: str | None = None
 
-    class Config:
-        use_enum_values = True
+    # GAMEDIG
+    game: str | None = None
+    gamedigGivenPortOnly: bool | None = None
 
 
-class MonitorUpdate(Monitor):
-    type: Optional[MonitorType] = None
-    name: Optional[str] = None
+class Monitor(MonitorUpdate):
+    type: MonitorType
+    name: str
 
 
 class MonitorTag(BaseModel):
     tag_id: int
-    value: Optional[str] = ""
+    value: str = ""

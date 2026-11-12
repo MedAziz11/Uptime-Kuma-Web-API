@@ -1,18 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
-from uptime_kuma_api import UptimeKumaApi, UptimeKumaException
+from typing import Any
 
-from config import logger as logging
-from schemas.api import API
-from utils.deps import get_current_user
+from fastapi import APIRouter
 
-router = APIRouter(redirect_slashes=True)
+from app.deps import Kuma
+
+router = APIRouter()
 
 
-@router.get("", description="Get Certification Info")
-async def get_cert_info(cur_user: API = Depends(get_current_user)):
-    api : UptimeKumaApi = cur_user['api']
-    try:
-        return api.cert_info()
-    except Exception as e:
-        logging.fatal(e)
-        raise HTTPException(500, str(e))
+@router.get("", summary="Get certificate info")
+def get_cert_info(kuma: Kuma) -> dict[Any, Any]:
+    return kuma.monitor_stats("cert_info")

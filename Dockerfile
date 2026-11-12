@@ -1,65 +1,36 @@
-# First stage: Build environment
-FROM python:3.9-alpine AS builder
+# Build stage: install dependencies into a virtual environment
+FROM python:3.13-alpine AS builder
 
-# Create a new user and group to run the app under, the user should have a shell
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup -s /bin/sh
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Set the working directory to /app and give appuser ownership
-WORKDIR /app
-RUN chown appuser:appgroup /app
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 
-# Create a virtual environment and activate it
-RUN python -m venv venv
-ENV PATH="/app/venv/bin:$PATH"
+# Runtime stage
+FROM python:3.13-alpine
 
-# Upgrade pip and install the requirements
-COPY --chown=appuser:appgroup ./requirements.txt ./
+# Same user/group creation as the v1 image, so existing /db volumes keep their ownership.
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup -s /bin/sh && \
+    mkdir /db && chown appuser:appgroup /db
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    DB_PATH=/db/db.sqlite3
 
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r ./requirements.txt
-       
-COPY --chown=appuser:appgroup ./app /app
+COPY --from=builder /opt/venv /opt/venv
 
-USER appuser
-
-
-# Second stage: Runtime environment
-FROM python:3.9-alpine
-
-# Create a new user and group to run the app under, the user should have a shell
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup -s /bin/sh
-
-# Copy Python packages and the virtual environment from the builder stage
-COPY --from=builder --chown=appuser:appgroup /app /app
-
-# Create /db directory to prevent permission issues
-RUN mkdir /db && \
-    chown appuser:appgroup /db
-
-# Set the working directory to /app
-WORKDIR /app
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Set the PATH to include the virtual environment
-ENV PATH="/app/venv/bin:$PATH"
-
-## Cleanup without impacting the codebase
-RUN chmod +x /app/entrypoint.sh 
+WORKDIR /srv
+COPY app ./app
 
 USER appuser
+EXPOSE 8000
+VOLUME /db
 
-#Run the app
-ENTRYPOINT ["/app/entrypoint.sh"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
 
-# ENTRYPOINT [ "tail", "-f", "/dev/null" ]
-
-
+# A single worker: the API keeps one shared connection to Uptime Kuma.
+CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]

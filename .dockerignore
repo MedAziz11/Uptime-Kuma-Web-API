@@ -1,1 +1,4 @@
-docker-compose.yml
+*
+!app
+!requirements.txt
+**/__pycache__

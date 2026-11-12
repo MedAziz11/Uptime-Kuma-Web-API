@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'medaziz11' }}
+  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'uptimekuma_restapi' }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Ruff (lint)
+        run: ruff check --output-format=github app tests
+
+      - name: Ruff (format)
+        run: ruff format --check app tests
+
+  test:
+    name: Unit tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      # Fails under 95 % coverage (see [tool.coverage.report] in pyproject.toml)
+      - name: Pytest
+        run: pytest --cov --cov-report=term --cov-report=xml
+
+      - name: Upload coverage report
+        if: matrix.python-version == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+  e2e:
+    name: End-to-end (Uptime Kuma ${{ matrix.kuma-version }})
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Oldest supported, newest officially supported by uptime-kuma-api, latest 1.x
+        kuma-version: ["1.21.3", "1.23.2", "1"]
+    env:
+      KUMA_VERSION: ${{ matrix.kuma-version }}
+      KUMA_USERNAME: ci-kuma-user
+      KUMA_PASSWORD: Ci-kuma-password-1!
+      ADMIN_PASSWORD: ci-admin-password
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      # Builds the image from the Dockerfile and waits for both health checks
+      - name: Start Uptime Kuma and the API
+        run: docker compose up -d --build --wait
+
+      - name: Create the Uptime Kuma user
+        run: python tests/e2e/setup_kuma.py http://127.0.0.1:3001
+
+      - name: Run the end-to-end tests
+        env:
+          E2E_API_URL: http://127.0.0.1:8000
+          E2E_ADMIN_PASSWORD: ${{ env.ADMIN_PASSWORD }}
+        run: pytest tests/e2e -v
+
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
+
+  docker:
+    name: Docker image
+    needs: [lint, test, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Emulation for the arm64 build
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Images are published from main (edge) and develop (dev) only.
+      # Releases are published by release.yml.
+      - name: Decide what to publish
+        id: publish
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          IMAGE="${DOCKERHUB_REPO}/${DOCKERHUB_IMAGE}"
+          if [[ "$EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/main" ]]; then
+            echo "push=true" >> "$GITHUB_OUTPUT"
+            echo "tags=${IMAGE}:edge" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/develop" ]]; then
+            echo "push=true" >> "$GITHUB_OUTPUT"
+            echo "tags=${IMAGE}:dev" >> "$GITHUB_OUTPUT"
+          else
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "tags=${IMAGE}:ci" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login to Docker Hub
+        if: steps.publish.outputs.push == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build (and push) the multi-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ steps.publish.outputs.push == 'true' }}
+          tags: ${{ steps.publish.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
