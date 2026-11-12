@@ -77,4 +77,4 @@ Upgrade guide: [docs/releases/v2.0.0.md](docs/releases/v2.0.0.md).
 - `diff.txt`, the outdated endpoint screenshots, and the curl test scripts (replaced by
   `tests/e2e`).
 
-[2.0.0]: https://github.com/MedAziz11/Uptime-Kuma-Web-API/compare/v1.2.1...v2.0.0
+[2.0.0]: https://github.com/MedAziz11/Uptime-Kuma-Web-API/compare/v1.2.2...v2.0.0
