@@ -1,12 +1,12 @@
 #!/bin/bash
 
-BASE_URL="http://127.0.0.1:8000"
+BASE_URL="${BASE_URL:-http://127.0.0.1:8000}"
 
 TOKEN=$(curl -s -X 'POST' \
   "${BASE_URL}/login/access-token" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  -d 'grant_type=&username=admin&password=admin&scope=&client_id=&client_secret=' | jq -r ".access_token")
+  --data-urlencode 'username=admin' --data-urlencode "password=${ADMIN_PASSWORD:?set ADMIN_PASSWORD}" | jq -r ".access_token")
 
 echo "Token: ${TOKEN}"
 

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-BASE_URL="http://127.0.0.1:8000"
+BASE_URL="${BASE_URL:-http://127.0.0.1:8000}"
 TOKEN=$(curl -s -X 'POST' \
   "${BASE_URL}/login/access-token" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  -d 'grant_type=&username=admin&password=admin&scope=&client_id=&client_secret=' | jq -r ".access_token")
+  --data-urlencode 'username=admin' --data-urlencode "password=${ADMIN_PASSWORD:?set ADMIN_PASSWORD}" | jq -r ".access_token")
 
 echo "Token: ${TOKEN} \n"
 
@@ -50,13 +50,13 @@ curl -s -X 'GET' \
 
 echo "Get maintenance by ID: \n"
 curl -s -X 'GET' \
-  "http://localhost:8000/maintenance/${MAINTENANCE_ID}" \
+  "${BASE_URL}/maintenance/${MAINTENANCE_ID}" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}"
 
 echo "Update maintenance: \n"
 curl -s -X 'PATCH' \
-  "http://localhost:8000/maintenance/${MAINTENANCE_ID}" \
+  "${BASE_URL}/maintenance/${MAINTENANCE_ID}" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -H 'Content-Type: application/json' \
@@ -85,21 +85,21 @@ curl -s -X 'PATCH' \
 
 echo "Pause maintenance: \n"
 curl -s -X 'POST' \
-  "http://localhost:8000/maintenance/${MAINTENANCE_ID}/pause" \
+  "${BASE_URL}/maintenance/${MAINTENANCE_ID}/pause" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -d ''
 
 echo "Resume maintenance: \n"
 curl -s -X 'POST' \
-  "http://localhost:8000/maintenance/${MAINTENANCE_ID}/resume" \
+  "${BASE_URL}/maintenance/${MAINTENANCE_ID}/resume" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -d ''
 
 echo "Add monitors to a maintenance: \n"
 curl -s -X 'POST' \
-  "http://localhost:8000/maintenance/${MAINTENANCE_ID}/monitors" \
+  "${BASE_URL}/maintenance/${MAINTENANCE_ID}/monitors" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -H 'Content-Type: application/json' \
@@ -112,7 +112,7 @@ curl -s -X 'POST' \
 
 echo "Get monitors to a maintenance: \n"
 curl -s -X 'GET' \
-  "http://localhost:8000/maintenance/${MAINTENANCE_ID}/monitors" \
+  "${BASE_URL}/maintenance/${MAINTENANCE_ID}/monitors" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}"
 
@@ -120,4 +120,4 @@ echo "Delete maintenance: \n"
 curl -s -X 'DELETE' \
   -H 'Accept: application/json' \
   -H "${AUTH_HEADER}" \
-  "${BASE_URL}/maintenances/${MAINTENANCE_ID}"
+  "${BASE_URL}/maintenance/${MAINTENANCE_ID}"

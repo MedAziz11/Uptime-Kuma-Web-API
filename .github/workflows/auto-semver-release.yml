@@ -11,7 +11,7 @@ jobs:
     if: github.event.pull_request.merged && (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'develop')
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Tag
         uses: K-Phoen/semver-release-action@master
