@@ -64,7 +64,7 @@ jobs:
       # v2.0.0 -> v2.0.0, v2.0, v2 and latest (pre-releases such as v2.1.0-rc.1 only get their own tag)
       - name: Image tags
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.DOCKERHUB_REPO }}/${{ env.DOCKERHUB_IMAGE }}
           tags: |
