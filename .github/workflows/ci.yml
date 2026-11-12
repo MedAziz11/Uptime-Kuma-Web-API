@@ -121,7 +121,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # Emulation for the arm64 build
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
 
       - uses: docker/setup-buildx-action@v3
 
