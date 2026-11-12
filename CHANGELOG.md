@@ -58,7 +58,7 @@ Upgrade guide: [docs/releases/v2.0.0.md](docs/releases/v2.0.0.md).
 - Tests: unit tests (100 % coverage, CI fails under 95 %), an integration test of the real
   `uptime-kuma-api` client against a stand-in Socket.IO server, and end-to-end tests against
   Uptime Kuma 1.21.3, 1.23.2 and the latest 1.x.
-- CI: lint, unit tests on Python 3.11–3.13, end-to-end tests, multi-arch image build; CodeQL;
+- CI: lint, unit tests on Python 3.11–3.13, end-to-end tests, multi-arch image build;
   Dependabot; a tag-driven release workflow (Docker image + GitHub release).
 - Docker health check; `KUMA_VERSION` selects the Uptime Kuma image in `docker-compose.yml`.
 - `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, release notes.
