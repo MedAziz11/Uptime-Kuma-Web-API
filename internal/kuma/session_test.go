@@ -40,7 +40,7 @@ func TestLazyConnectLoginAndPushes(t *testing.T) {
 	if f.count("login") != 1 || f.count("loginByToken") != 0 {
 		t.Fatalf("login = %d, loginByToken = %d", f.count("login"), f.count("loginByToken"))
 	}
-	if p := waitFor(t, pushes, "info"); p != `info {"primaryBaseURL":null,"version":"2.5.11"}` {
+	if p := waitFor(t, pushes, "info"); p != `info {"primaryBaseURL":null,"serverTimezone":"UTC"}` {
 		t.Fatal(p)
 	}
 	if p := waitFor(t, pushes, "monitorList"); p != `monitorList {"1":{"id":1,"name":"m"}}` {

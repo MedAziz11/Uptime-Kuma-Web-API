@@ -41,7 +41,7 @@ func BenchmarkSessionCallParallel(b *testing.B) {
 }
 
 func newBenchKuma(b *testing.B) *siotest.Server {
-	srv := siotest.NewServer(siotest.Options{OnEvent: func(s *siotest.Socket, ev siotest.Event) {
+	srv := siotest.NewServer(siotest.Options{OnConnect: func(s *siotest.Socket) { _ = s.Emit("loginRequired") }, OnEvent: func(s *siotest.Socket, ev siotest.Event) {
 		switch ev.Name {
 		case "login":
 			_ = s.Ack(ev.ID, map[string]any{"ok": true, "token": "jwt"})
