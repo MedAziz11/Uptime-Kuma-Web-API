@@ -1,0 +1,511 @@
+[
+  {
+    "event": "info",
+    "args": [
+      {
+        "serverTimezone": "UTC",
+        "serverTimezoneOffset": "+00:00"
+      }
+    ]
+  },
+  {
+    "event": "setup",
+    "args": []
+  },
+  {
+    "event": "loginRequired",
+    "args": []
+  },
+  {
+    "event": "monitorList",
+    "args": [
+      {}
+    ]
+  },
+  {
+    "event": "monitorTypeList",
+    "args": [
+      {
+        "real-browser": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "tailscale-ping": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "websocket-upgrade": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "dns": {
+          "supportsConditions": true,
+          "conditionVariables": [
+            {
+              "id": "record",
+              "operators": [
+                {
+                  "id": "equals",
+                  "caption": "equals"
+                },
+                {
+                  "id": "not_equals",
+                  "caption": "not equals"
+                },
+                {
+                  "id": "contains",
+                  "caption": "contains"
+                },
+                {
+                  "id": "not_contains",
+                  "caption": "not contains"
+                },
+                {
+                  "id": "starts_with",
+                  "caption": "starts with"
+                },
+                {
+                  "id": "not_starts_with",
+                  "caption": "not starts with"
+                },
+                {
+                  "id": "ends_with",
+                  "caption": "ends with"
+                },
+                {
+                  "id": "not_ends_with",
+                  "caption": "not ends with"
+                }
+              ]
+            }
+          ]
+        },
+        "postgres": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "mqtt": {
+          "supportsConditions": true,
+          "conditionVariables": [
+            {
+              "id": "topic",
+              "operators": [
+                {
+                  "id": "equals",
+                  "caption": "equals"
+                },
+                {
+                  "id": "not_equals",
+                  "caption": "not equals"
+                },
+                {
+                  "id": "contains",
+                  "caption": "contains"
+                },
+                {
+                  "id": "not_contains",
+                  "caption": "not contains"
+                },
+                {
+                  "id": "starts_with",
+                  "caption": "starts with"
+                },
+                {
+                  "id": "not_starts_with",
+                  "caption": "not starts with"
+                },
+                {
+                  "id": "ends_with",
+                  "caption": "ends with"
+                },
+                {
+                  "id": "not_ends_with",
+                  "caption": "not ends with"
+                }
+              ]
+            },
+            {
+              "id": "message",
+              "operators": [
+                {
+                  "id": "equals",
+                  "caption": "equals"
+                },
+                {
+                  "id": "not_equals",
+                  "caption": "not equals"
+                },
+                {
+                  "id": "contains",
+                  "caption": "contains"
+                },
+                {
+                  "id": "not_contains",
+                  "caption": "not contains"
+                },
+                {
+                  "id": "starts_with",
+                  "caption": "starts with"
+                },
+                {
+                  "id": "not_starts_with",
+                  "caption": "not starts with"
+                },
+                {
+                  "id": "ends_with",
+                  "caption": "ends with"
+                },
+                {
+                  "id": "not_ends_with",
+                  "caption": "not ends with"
+                }
+              ]
+            },
+            {
+              "id": "json_value",
+              "operators": [
+                {
+                  "id": "equals",
+                  "caption": "equals"
+                },
+                {
+                  "id": "not_equals",
+                  "caption": "not equals"
+                },
+                {
+                  "id": "contains",
+                  "caption": "contains"
+                },
+                {
+                  "id": "not_contains",
+                  "caption": "not contains"
+                },
+                {
+                  "id": "starts_with",
+                  "caption": "starts with"
+                },
+                {
+                  "id": "not_starts_with",
+                  "caption": "not starts with"
+                },
+                {
+                  "id": "ends_with",
+                  "caption": "ends with"
+                },
+                {
+                  "id": "not_ends_with",
+                  "caption": "not ends with"
+                },
+                {
+                  "id": "num_equals",
+                  "caption": "equals"
+                },
+                {
+                  "id": "num_not_equals",
+                  "caption": "not equals"
+                },
+                {
+                  "id": "lt",
+                  "caption": "less than"
+                },
+                {
+                  "id": "gt",
+                  "caption": "greater than"
+                },
+                {
+                  "id": "lte",
+                  "caption": "less than or equal to"
+                },
+                {
+                  "id": "gte",
+                  "caption": "greater than or equal to"
+                }
+              ]
+            }
+          ]
+        },
+        "smtp": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "group": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "snmp": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "grpc-keyword": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "mongodb": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "rabbitmq": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "sip-options": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "gamedig": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "steam": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "port": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "manual": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "globalping": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "redis": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "pm2": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "system-service": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "sqlserver": {
+          "supportsConditions": true,
+          "conditionVariables": [
+            {
+              "id": "result",
+              "operators": [
+                {
+                  "id": "equals",
+                  "caption": "equals"
+                },
+                {
+                  "id": "not_equals",
+                  "caption": "not equals"
+                },
+                {
+                  "id": "contains",
+                  "caption": "contains"
+                },
+                {
+                  "id": "not_contains",
+                  "caption": "not contains"
+                },
+                {
+                  "id": "starts_with",
+                  "caption": "starts with"
+                },
+                {
+                  "id": "not_starts_with",
+                  "caption": "not starts with"
+                },
+                {
+                  "id": "ends_with",
+                  "caption": "ends with"
+                },
+                {
+                  "id": "not_ends_with",
+                  "caption": "not ends with"
+                }
+              ]
+            }
+          ]
+        },
+        "mysql": {
+          "supportsConditions": true,
+          "conditionVariables": [
+            {
+              "id": "result",
+              "operators": [
+                {
+                  "id": "equals",
+                  "caption": "equals"
+                },
+                {
+                  "id": "not_equals",
+                  "caption": "not equals"
+                },
+                {
+                  "id": "contains",
+                  "caption": "contains"
+                },
+                {
+                  "id": "not_contains",
+                  "caption": "not contains"
+                },
+                {
+                  "id": "starts_with",
+                  "caption": "starts with"
+                },
+                {
+                  "id": "not_starts_with",
+                  "caption": "not starts with"
+                },
+                {
+                  "id": "ends_with",
+                  "caption": "ends with"
+                },
+                {
+                  "id": "not_ends_with",
+                  "caption": "not ends with"
+                }
+              ]
+            }
+          ]
+        },
+        "sftp": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        },
+        "oracledb": {
+          "supportsConditions": true,
+          "conditionVariables": [
+            {
+              "id": "result",
+              "operators": [
+                {
+                  "id": "equals",
+                  "caption": "equals"
+                },
+                {
+                  "id": "not_equals",
+                  "caption": "not equals"
+                },
+                {
+                  "id": "contains",
+                  "caption": "contains"
+                },
+                {
+                  "id": "not_contains",
+                  "caption": "not contains"
+                },
+                {
+                  "id": "starts_with",
+                  "caption": "starts with"
+                },
+                {
+                  "id": "not_starts_with",
+                  "caption": "not starts with"
+                },
+                {
+                  "id": "ends_with",
+                  "caption": "ends with"
+                },
+                {
+                  "id": "not_ends_with",
+                  "caption": "not ends with"
+                }
+              ]
+            }
+          ]
+        },
+        "ntp": {
+          "supportsConditions": false,
+          "conditionVariables": []
+        }
+      }
+    ]
+  },
+  {
+    "event": "maintenanceList",
+    "args": [
+      {}
+    ]
+  },
+  {
+    "event": "info",
+    "args": [
+      {
+        "serverTimezone": "UTC",
+        "serverTimezoneOffset": "+00:00",
+        "version": "2.5.11",
+        "latestVersion": null,
+        "isContainer": true,
+        "dbType": "sqlite",
+        "runtime": {
+          "platform": "linux",
+          "arch": "x64"
+        }
+      }
+    ]
+  },
+  {
+    "event": "notificationList",
+    "args": [
+      []
+    ]
+  },
+  {
+    "event": "proxyList",
+    "args": [
+      []
+    ]
+  },
+  {
+    "event": "dockerHostList",
+    "args": [
+      []
+    ]
+  },
+  {
+    "event": "apiKeyList",
+    "args": [
+      []
+    ]
+  },
+  {
+    "event": "remoteBrowserList",
+    "args": [
+      []
+    ]
+  },
+  {
+    "event": "statusPageList",
+    "args": [
+      {}
+    ]
+  },
+  {
+    "event": "initServerTimezone",
+    "args": []
+  },
+  {
+    "event": "monitorList",
+    "args": [
+      {}
+    ]
+  },
+  {
+    "event": "maintenanceList",
+    "args": [
+      {}
+    ]
+  },
+  {
+    "event": "apiKeyList",
+    "args": [
+      []
+    ]
+  },
+  {
+    "event": "deleteMonitorFromList",
+    "args": [
+      999999
+    ]
+  }
+]

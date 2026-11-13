@@ -1,0 +1,180 @@
+{
+  "needSetup": {
+    "args": [],
+    "ack": true
+  },
+  "setup": {
+    "args": [
+      "e2e",
+      "<redacted>"
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successAdded",
+      "msgi18n": true
+    }
+  },
+  "login": {
+    "args": [
+      {
+        "username": "e2e",
+        "password": "<redacted>",
+        "token": ""
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "token": "<redacted>"
+    }
+  },
+  "getSettings": {
+    "args": [],
+    "ack": {
+      "ok": true,
+      "data": {
+        "serverTimezone": "UTC"
+      }
+    }
+  },
+  "getTags": {
+    "args": [],
+    "ack": {
+      "ok": true,
+      "tags": []
+    }
+  },
+  "getMonitorList": {
+    "args": [],
+    "ack": {
+      "ok": true
+    }
+  },
+  "getGameList": {
+    "args": [],
+    "ack": {
+      "ok": true,
+      "gameList": [
+        {
+          "keys": [
+            "sdtd"
+          ],
+          "pretty": "7 Days to Die",
+          "options": {
+            "port": 26900,
+            "port_query_offset": 1,
+            "protocol": "sdtd"
+          },
+          "extra": {
+            "old_id": "7d2d",
+            "doc_notes": "sdtd"
+          }
+        },
+        {
+          "keys": [
+            "arma2"
+          ],
+          "pretty": "ARMA 2",
+          "options": {
+            "port": 2302,
+            "port_query_offset": 1,
+            "protocol": "valve"
+          },
+          "extra": {}
+        }
+      ]
+    }
+  },
+  "getDatabaseSize": {
+    "args": [],
+    "ack": {
+      "ok": true,
+      "size": 61440
+    }
+  },
+  "getMaintenanceList": {
+    "args": [],
+    "ack": {
+      "ok": true
+    }
+  },
+  "getAPIKeyList": {
+    "args": [],
+    "ack": {
+      "ok": true
+    }
+  },
+  "twoFAStatus": {
+    "args": [],
+    "ack": {
+      "ok": true,
+      "status": false
+    }
+  },
+  "getMonitor.missing": {
+    "args": [
+      999999
+    ],
+    "ack": {
+      "ok": false,
+      "msg": "Cannot read properties of null (reading 'id')"
+    }
+  },
+  "deleteMonitor.missing": {
+    "args": [
+      999999
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successDeleted",
+      "msgi18n": true
+    }
+  },
+  "getStatusPage.missing": {
+    "args": [
+      "nope"
+    ],
+    "ack": {
+      "ok": false,
+      "msg": "No slug?"
+    }
+  },
+  "deleteTag.missing": {
+    "args": [
+      999999
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successDeleted",
+      "msgi18n": true
+    }
+  },
+  "addTag": {
+    "args": [
+      {
+        "name": "capture",
+        "color": "#00ff41"
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "tag": {
+        "id": 1,
+        "name": "capture",
+        "color": "#00ff41"
+      }
+    }
+  },
+  "add.minimal": {
+    "args": [
+      {
+        "type": "http",
+        "name": "minimal",
+        "url": "http://127.0.0.1:1"
+      }
+    ],
+    "ack": {
+      "ok": false,
+      "msg": "Cannot read properties of undefined (reading 'every')"
+    }
+  }
+}

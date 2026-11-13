@@ -1,0 +1,1040 @@
+{
+  "login": {
+    "args": [
+      {
+        "username": "e2e",
+        "password": "<redacted>",
+        "token": ""
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "token": "<redacted>"
+    }
+  },
+  "add.http": {
+    "args": [
+      {
+        "type": "http",
+        "name": "capture http",
+        "parent": null,
+        "url": "http://127.0.0.1:3001",
+        "wsSubprotocol": "",
+        "method": "GET",
+        "protocol": null,
+        "location": "world",
+        "ipFamily": null,
+        "interval": 60,
+        "retryInterval": 60,
+        "resendInterval": 0,
+        "maxretries": 0,
+        "retryOnlyOnStatusCodeFailure": false,
+        "notificationIDList": {},
+        "ignoreTls": false,
+        "upsideDown": false,
+        "expiryNotification": false,
+        "domainExpiryNotification": true,
+        "maxredirects": 10,
+        "accepted_statuscodes": [
+          "200-299"
+        ],
+        "saveResponse": false,
+        "saveErrorResponse": true,
+        "responseMaxLength": 1024,
+        "dns_resolve_type": "A",
+        "dns_resolve_server": "1.1.1.1",
+        "docker_container": "",
+        "docker_host": null,
+        "proxyId": null,
+        "basic_auth_user": "",
+        "basic_auth_pass": "",
+        "bearer_token": "",
+        "mqttUsername": "",
+        "mqttPassword": "",
+        "mqttTopic": "",
+        "mqttWebsocketPath": "",
+        "mqttSuccessMessage": "",
+        "mqttCheckType": "keyword",
+        "authMethod": null,
+        "oauth_auth_method": "client_secret_basic",
+        "httpBodyEncoding": "json",
+        "kafkaProducerBrokers": [],
+        "kafkaProducerSaslOptions": {
+          "mechanism": "None"
+        },
+        "cacheBust": false,
+        "kafkaProducerSsl": false,
+        "kafkaProducerAllowAutoTopicCreation": false,
+        "gamedigGivenPortOnly": true,
+        "gamedigToken": "",
+        "remote_browser": null,
+        "screenshot_delay": 0,
+        "rabbitmqNodes": [],
+        "rabbitmqUsername": "",
+        "rabbitmqPassword": "",
+        "conditions": [],
+        "system_service_name": "",
+        "sshAuthMethod": "password",
+        "ntpStratumThreshold": 5,
+        "ntpTimeOffsetThreshold": 1000,
+        "ntpRootDispersionThreshold": 500
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successAdded",
+      "msgi18n": true,
+      "monitorID": 1
+    }
+  },
+  "add.group": {
+    "args": [
+      {
+        "type": "group",
+        "name": "capture group",
+        "parent": null,
+        "url": "https://",
+        "wsSubprotocol": "",
+        "method": "GET",
+        "protocol": null,
+        "location": "world",
+        "ipFamily": null,
+        "interval": 60,
+        "retryInterval": 60,
+        "resendInterval": 0,
+        "maxretries": 0,
+        "retryOnlyOnStatusCodeFailure": false,
+        "notificationIDList": {},
+        "ignoreTls": false,
+        "upsideDown": false,
+        "expiryNotification": false,
+        "domainExpiryNotification": true,
+        "maxredirects": 10,
+        "accepted_statuscodes": [
+          "200-299"
+        ],
+        "saveResponse": false,
+        "saveErrorResponse": true,
+        "responseMaxLength": 1024,
+        "dns_resolve_type": "A",
+        "dns_resolve_server": "1.1.1.1",
+        "docker_container": "",
+        "docker_host": null,
+        "proxyId": null,
+        "basic_auth_user": "",
+        "basic_auth_pass": "",
+        "bearer_token": "",
+        "mqttUsername": "",
+        "mqttPassword": "",
+        "mqttTopic": "",
+        "mqttWebsocketPath": "",
+        "mqttSuccessMessage": "",
+        "mqttCheckType": "keyword",
+        "authMethod": null,
+        "oauth_auth_method": "client_secret_basic",
+        "httpBodyEncoding": "json",
+        "kafkaProducerBrokers": [],
+        "kafkaProducerSaslOptions": {
+          "mechanism": "None"
+        },
+        "cacheBust": false,
+        "kafkaProducerSsl": false,
+        "kafkaProducerAllowAutoTopicCreation": false,
+        "gamedigGivenPortOnly": true,
+        "gamedigToken": "",
+        "remote_browser": null,
+        "screenshot_delay": 0,
+        "rabbitmqNodes": [],
+        "rabbitmqUsername": "",
+        "rabbitmqPassword": "",
+        "conditions": [],
+        "system_service_name": "",
+        "sshAuthMethod": "password",
+        "ntpStratumThreshold": 5,
+        "ntpTimeOffsetThreshold": 1000,
+        "ntpRootDispersionThreshold": 500
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successAdded",
+      "msgi18n": true,
+      "monitorID": 2
+    }
+  },
+  "add.push": {
+    "args": [
+      {
+        "type": "push",
+        "name": "capture push",
+        "parent": null,
+        "url": "https://",
+        "wsSubprotocol": "",
+        "method": "GET",
+        "protocol": null,
+        "location": "world",
+        "ipFamily": null,
+        "interval": 60,
+        "retryInterval": 60,
+        "resendInterval": 0,
+        "maxretries": 0,
+        "retryOnlyOnStatusCodeFailure": false,
+        "notificationIDList": {},
+        "ignoreTls": false,
+        "upsideDown": false,
+        "expiryNotification": false,
+        "domainExpiryNotification": true,
+        "maxredirects": 10,
+        "accepted_statuscodes": [
+          "200-299"
+        ],
+        "saveResponse": false,
+        "saveErrorResponse": true,
+        "responseMaxLength": 1024,
+        "dns_resolve_type": "A",
+        "dns_resolve_server": "1.1.1.1",
+        "docker_container": "",
+        "docker_host": null,
+        "proxyId": null,
+        "basic_auth_user": "",
+        "basic_auth_pass": "",
+        "bearer_token": "",
+        "mqttUsername": "",
+        "mqttPassword": "",
+        "mqttTopic": "",
+        "mqttWebsocketPath": "",
+        "mqttSuccessMessage": "",
+        "mqttCheckType": "keyword",
+        "authMethod": null,
+        "oauth_auth_method": "client_secret_basic",
+        "httpBodyEncoding": "json",
+        "kafkaProducerBrokers": [],
+        "kafkaProducerSaslOptions": {
+          "mechanism": "None"
+        },
+        "cacheBust": false,
+        "kafkaProducerSsl": false,
+        "kafkaProducerAllowAutoTopicCreation": false,
+        "gamedigGivenPortOnly": true,
+        "gamedigToken": "",
+        "remote_browser": null,
+        "screenshot_delay": 0,
+        "rabbitmqNodes": [],
+        "rabbitmqUsername": "",
+        "rabbitmqPassword": "",
+        "conditions": [],
+        "system_service_name": "",
+        "sshAuthMethod": "password",
+        "ntpStratumThreshold": 5,
+        "ntpTimeOffsetThreshold": 1000,
+        "ntpRootDispersionThreshold": 500
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successAdded",
+      "msgi18n": true,
+      "monitorID": 3
+    }
+  },
+  "getMonitor": {
+    "args": [
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "monitor": {
+        "id": 1,
+        "name": "capture http",
+        "description": null,
+        "path": [
+          null
+        ],
+        "pathName": "",
+        "parent": null,
+        "childrenIDs": [],
+        "url": "http://127.0.0.1:3001",
+        "wsIgnoreSecWebsocketAcceptHeader": false,
+        "wsSubprotocol": "",
+        "method": "GET",
+        "hostname": null,
+        "port": null,
+        "location": "world",
+        "protocol": null,
+        "maxretries": 0,
+        "weight": 2000,
+        "active": true,
+        "forceInactive": false,
+        "type": "http",
+        "subtype": null,
+        "timeout": 0,
+        "interval": 60,
+        "retryInterval": 60,
+        "retryOnlyOnStatusCodeFailure": false,
+        "resendInterval": 0,
+        "keyword": null,
+        "invertKeyword": false,
+        "expiryNotification": false,
+        "domainExpiryNotification": true,
+        "ignoreTls": false,
+        "upsideDown": false,
+        "packetSize": 56,
+        "maxredirects": 10,
+        "accepted_statuscodes": [
+          "200-299"
+        ],
+        "dns_resolve_type": "A",
+        "dns_resolve_server": "1.1.1.1",
+        "dns_last_result": null,
+        "docker_container": "",
+        "docker_host": null,
+        "proxyId": null,
+        "notificationIDList": {},
+        "tags": [],
+        "maintenance": false,
+        "mqttTopic": "",
+        "mqttSuccessMessage": "",
+        "mqttCheckType": "keyword",
+        "databaseQuery": null,
+        "authMethod": null,
+        "grpcUrl": null,
+        "grpcProtobuf": null,
+        "grpcMethod": null,
+        "grpcServiceName": null,
+        "grpcEnableTls": false,
+        "radiusCalledStationId": null,
+        "radiusCallingStationId": null,
+        "game": null,
+        "gamedigGivenPortOnly": true,
+        "httpBodyEncoding": "json",
+        "jsonPath": null,
+        "expectedValue": null,
+        "system_service_name": "",
+        "kafkaProducerTopic": null,
+        "kafkaProducerBrokers": [],
+        "kafkaProducerSsl": false,
+        "kafkaProducerAllowAutoTopicCreation": false,
+        "kafkaProducerMessage": null,
+        "screenshot": null,
+        "cacheBust": false,
+        "remote_browser": null,
+        "screenshot_delay": 0,
+        "snmpOid": null,
+        "jsonPathOperator": null,
+        "snmpVersion": "2c",
+        "smtpSecurity": null,
+        "rabbitmqNodes": [],
+        "conditions": [],
+        "ntpStratumThreshold": 5,
+        "ntpTimeOffsetThreshold": 1000,
+        "ntpRootDispersionThreshold": 500,
+        "ipFamily": null,
+        "sftpPath": null,
+        "sshAuthMethod": "password",
+        "ping_numeric": true,
+        "ping_count": 1,
+        "ping_per_request_timeout": 2,
+        "saveResponse": false,
+        "saveErrorResponse": true,
+        "responseMaxLength": 1024,
+        "headers": null,
+        "body": null,
+        "grpcBody": null,
+        "grpcMetadata": null,
+        "basic_auth_user": "",
+        "basic_auth_pass": "",
+        "oauth_client_id": null,
+        "oauth_client_secret": null,
+        "oauth_token_url": null,
+        "oauth_scopes": null,
+        "oauth_audience": null,
+        "oauth_auth_method": "client_secret_basic",
+        "bearer_token": "",
+        "gamedigToken": "",
+        "pushToken": null,
+        "databaseConnectionString": null,
+        "radiusUsername": null,
+        "radiusPassword": null,
+        "radiusSecret": null,
+        "mqttUsername": "",
+        "mqttPassword": "",
+        "mqttWebsocketPath": "",
+        "authWorkstation": null,
+        "authDomain": null,
+        "tlsCa": null,
+        "tlsCert": null,
+        "tlsKey": null,
+        "kafkaProducerSaslOptions": {
+          "mechanism": "None"
+        },
+        "rabbitmqUsername": "",
+        "rabbitmqPassword": "",
+        "sshUsername": null,
+        "sshPassword": null,
+        "sshPrivateKey": null,
+        "sshPassphrase": null,
+        "includeSensitiveData": true
+      }
+    }
+  },
+  "getMonitorBeats": {
+    "args": [
+      1,
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "data": [
+        {
+          "id": 1,
+          "important": 1,
+          "monitor_id": 1,
+          "status": 1,
+          "msg": "200 - OK",
+          "time": "2026-11-13 14:49:43.694",
+          "ping": 29,
+          "duration": 0,
+          "down_count": 0,
+          "end_time": "2026-11-13 14:49:43.739",
+          "retries": 0,
+          "response": null
+        }
+      ]
+    }
+  },
+  "getMonitorChartData": {
+    "args": [
+      1,
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "data": [
+        {
+          "up": 1,
+          "down": 0,
+          "avgPing": 29,
+          "minPing": 29,
+          "maxPing": 29,
+          "timestamp": 1794581340
+        }
+      ]
+    }
+  },
+  "monitorImportantHeartbeatListCount": {
+    "args": [
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "count": 1
+    }
+  },
+  "monitorImportantHeartbeatListPaged": {
+    "args": [
+      1,
+      0,
+      25
+    ],
+    "ack": {
+      "ok": true,
+      "data": [
+        {
+          "monitorID": 1,
+          "status": 1,
+          "time": "2026-11-13 14:49:43.694",
+          "msg": "200 - OK",
+          "ping": 29,
+          "important": 1,
+          "duration": 0,
+          "retries": 0,
+          "response": null
+        }
+      ]
+    }
+  },
+  "pauseMonitor": {
+    "args": [
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successPaused",
+      "msgi18n": true
+    }
+  },
+  "resumeMonitor": {
+    "args": [
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successResumed",
+      "msgi18n": true
+    }
+  },
+  "editMonitor": {
+    "args": [
+      {
+        "id": 1,
+        "name": "capture http renamed",
+        "description": null,
+        "path": [
+          null
+        ],
+        "pathName": "",
+        "parent": null,
+        "childrenIDs": [],
+        "url": "http://127.0.0.1:3001",
+        "wsIgnoreSecWebsocketAcceptHeader": false,
+        "wsSubprotocol": "",
+        "method": "GET",
+        "hostname": null,
+        "port": null,
+        "location": "world",
+        "protocol": null,
+        "maxretries": 0,
+        "weight": 2000,
+        "active": true,
+        "forceInactive": false,
+        "type": "http",
+        "subtype": null,
+        "timeout": 0,
+        "interval": 60,
+        "retryInterval": 60,
+        "retryOnlyOnStatusCodeFailure": false,
+        "resendInterval": 0,
+        "keyword": null,
+        "invertKeyword": false,
+        "expiryNotification": false,
+        "domainExpiryNotification": true,
+        "ignoreTls": false,
+        "upsideDown": false,
+        "packetSize": 56,
+        "maxredirects": 10,
+        "accepted_statuscodes": [
+          "200-299"
+        ],
+        "dns_resolve_type": "A",
+        "dns_resolve_server": "1.1.1.1",
+        "dns_last_result": null,
+        "docker_container": "",
+        "docker_host": null,
+        "proxyId": null,
+        "notificationIDList": {},
+        "tags": [],
+        "maintenance": false,
+        "mqttTopic": "",
+        "mqttSuccessMessage": "",
+        "mqttCheckType": "keyword",
+        "databaseQuery": null,
+        "authMethod": null,
+        "grpcUrl": null,
+        "grpcProtobuf": null,
+        "grpcMethod": null,
+        "grpcServiceName": null,
+        "grpcEnableTls": false,
+        "radiusCalledStationId": null,
+        "radiusCallingStationId": null,
+        "game": null,
+        "gamedigGivenPortOnly": true,
+        "httpBodyEncoding": "json",
+        "jsonPath": null,
+        "expectedValue": null,
+        "system_service_name": "",
+        "kafkaProducerTopic": null,
+        "kafkaProducerBrokers": [],
+        "kafkaProducerSsl": false,
+        "kafkaProducerAllowAutoTopicCreation": false,
+        "kafkaProducerMessage": null,
+        "screenshot": null,
+        "cacheBust": false,
+        "remote_browser": null,
+        "screenshot_delay": 0,
+        "snmpOid": null,
+        "jsonPathOperator": null,
+        "snmpVersion": "2c",
+        "smtpSecurity": null,
+        "rabbitmqNodes": [],
+        "conditions": [],
+        "ntpStratumThreshold": 5,
+        "ntpTimeOffsetThreshold": 1000,
+        "ntpRootDispersionThreshold": 500,
+        "ipFamily": null,
+        "sftpPath": null,
+        "sshAuthMethod": "password",
+        "ping_numeric": true,
+        "ping_count": 1,
+        "ping_per_request_timeout": 2,
+        "saveResponse": false,
+        "saveErrorResponse": true,
+        "responseMaxLength": 1024,
+        "headers": null,
+        "body": null,
+        "grpcBody": null,
+        "grpcMetadata": null,
+        "basic_auth_user": "",
+        "basic_auth_pass": "",
+        "oauth_client_id": null,
+        "oauth_client_secret": null,
+        "oauth_token_url": null,
+        "oauth_scopes": null,
+        "oauth_audience": null,
+        "oauth_auth_method": "client_secret_basic",
+        "bearer_token": "",
+        "gamedigToken": "",
+        "pushToken": null,
+        "databaseConnectionString": null,
+        "radiusUsername": null,
+        "radiusPassword": null,
+        "radiusSecret": null,
+        "mqttUsername": "",
+        "mqttPassword": "",
+        "mqttWebsocketPath": "",
+        "authWorkstation": null,
+        "authDomain": null,
+        "tlsCa": null,
+        "tlsCert": null,
+        "tlsKey": null,
+        "kafkaProducerSaslOptions": {
+          "mechanism": "None"
+        },
+        "rabbitmqUsername": "",
+        "rabbitmqPassword": "",
+        "sshUsername": null,
+        "sshPassword": null,
+        "sshPrivateKey": null,
+        "sshPassphrase": null,
+        "includeSensitiveData": true
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "Saved.",
+      "msgi18n": true,
+      "monitorID": 1
+    }
+  },
+  "addTag": {
+    "args": [
+      {
+        "name": "capture2",
+        "color": "#00ff41"
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "tag": {
+        "id": 3,
+        "name": "capture2",
+        "color": "#00ff41"
+      }
+    }
+  },
+  "addMonitorTag": {
+    "args": [
+      3,
+      1,
+      "v1"
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successAdded",
+      "msgi18n": true
+    }
+  },
+  "getTags.after": {
+    "args": [],
+    "ack": {
+      "ok": true,
+      "tags": [
+        {
+          "id": 1,
+          "name": "capture",
+          "color": "#00ff41"
+        },
+        {
+          "id": 3,
+          "name": "capture2",
+          "color": "#00ff41"
+        }
+      ]
+    }
+  },
+  "editTag": {
+    "args": [
+      {
+        "id": 3,
+        "name": "capture2b",
+        "color": "#00ff41"
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "Saved.",
+      "msgi18n": true,
+      "tag": {
+        "id": 3,
+        "name": "capture2b",
+        "color": "#00ff41"
+      }
+    }
+  },
+  "deleteMonitorTag": {
+    "args": [
+      3,
+      1,
+      "v1"
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successDeleted",
+      "msgi18n": true
+    }
+  },
+  "addNotification": {
+    "args": [
+      {
+        "name": "capture hook",
+        "type": "webhook",
+        "isDefault": false,
+        "applyExisting": false,
+        "webhookURL": "http://127.0.0.1:9/hook",
+        "webhookContentType": "json"
+      },
+      null
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "Saved.",
+      "msgi18n": true,
+      "id": 2
+    }
+  },
+  "addProxy": {
+    "args": [
+      {
+        "protocol": "http",
+        "host": "127.0.0.1",
+        "port": 3128,
+        "auth": false,
+        "active": true,
+        "default": false,
+        "applyExisting": false
+      },
+      null
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "Saved.",
+      "msgi18n": true,
+      "id": 2
+    }
+  },
+  "addDockerHost": {
+    "args": [
+      {
+        "name": "capture docker",
+        "dockerType": "socket",
+        "dockerDaemon": "/var/run/docker.sock"
+      },
+      null
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "Saved.",
+      "msgi18n": true,
+      "id": 2
+    }
+  },
+  "addMaintenance": {
+    "args": [
+      {
+        "title": "capture maint",
+        "description": "",
+        "strategy": "manual",
+        "active": true,
+        "intervalDay": 1,
+        "dateRange": [
+          null
+        ],
+        "timeRange": [
+          {
+            "hours": 2,
+            "minutes": 0
+          },
+          {
+            "hours": 3,
+            "minutes": 0
+          }
+        ],
+        "weekdays": [],
+        "daysOfMonth": [],
+        "cron": "30 3 * * *",
+        "durationMinutes": 60,
+        "timezoneOption": "UTC"
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successAdded",
+      "msgi18n": true,
+      "maintenanceID": 1
+    }
+  },
+  "addMonitorMaintenance": {
+    "args": [
+      1,
+      [
+        {
+          "id": 1
+        }
+      ]
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successAdded",
+      "msgi18n": true
+    }
+  },
+  "getMonitorMaintenance": {
+    "args": [
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "monitors": [
+        {
+          "id": 1
+        }
+      ]
+    }
+  },
+  "getMaintenance": {
+    "args": [
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "maintenance": {
+        "id": 1,
+        "title": "capture maint",
+        "description": "",
+        "strategy": "manual",
+        "intervalDay": 1,
+        "active": true,
+        "dateRange": [
+          null
+        ],
+        "timeRange": [
+          {
+            "hours": 0,
+            "minutes": 0
+          },
+          {
+            "hours": 0,
+            "minutes": 0
+          }
+        ],
+        "weekdays": [],
+        "daysOfMonth": [],
+        "timeslotList": [],
+        "cron": null,
+        "duration": null,
+        "durationMinutes": 0,
+        "timezone": "UTC",
+        "timezoneOption": "UTC",
+        "timezoneOffset": "+00:00",
+        "status": "under-maintenance"
+      }
+    }
+  },
+  "pauseMaintenance": {
+    "args": [
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successPaused",
+      "msgi18n": true
+    }
+  },
+  "addStatusPage": {
+    "args": [
+      "Capture",
+      "capture"
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successAdded",
+      "msgi18n": true,
+      "slug": "capture"
+    }
+  },
+  "getStatusPage": {
+    "args": [
+      "capture"
+    ],
+    "ack": {
+      "ok": true,
+      "config": {
+        "id": 1,
+        "slug": "capture",
+        "title": "Capture",
+        "description": null,
+        "icon": "/icon.svg",
+        "theme": "auto",
+        "autoRefreshInterval": 300,
+        "published": true,
+        "showTags": false,
+        "domainNameList": [],
+        "customCSS": null,
+        "footerText": null,
+        "showPoweredBy": true,
+        "analyticsId": null,
+        "analyticsScriptUrl": null,
+        "analyticsType": null,
+        "showCertificateExpiry": false,
+        "showOnlyLastHeartbeat": false,
+        "rssTitle": null
+      }
+    }
+  },
+  "postIncident": {
+    "args": [
+      "capture",
+      {
+        "title": "inc",
+        "content": "c",
+        "style": "info"
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "incident": {
+        "id": 1,
+        "style": "info",
+        "title": "inc",
+        "content": "c",
+        "pin": true,
+        "active": true,
+        "createdDate": "2026-11-13 14:50:00",
+        "status_page_id": 1
+      }
+    }
+  },
+  "getIncidentHistory": {
+    "args": [
+      "capture",
+      null
+    ],
+    "ack": {
+      "ok": true,
+      "incidents": [
+        {
+          "id": 1,
+          "style": "info",
+          "title": "inc",
+          "content": "c",
+          "pin": true,
+          "active": true,
+          "createdDate": "2026-11-13 14:50:00",
+          "lastUpdatedDate": null,
+          "status_page_id": 1
+        }
+      ],
+      "total": 1,
+      "nextCursor": null,
+      "hasMore": false
+    }
+  },
+  "unpinIncident": {
+    "args": [
+      "capture"
+    ],
+    "ack": {
+      "ok": true
+    }
+  },
+  "addAPIKey": {
+    "args": [
+      {
+        "name": "capture key",
+        "expires": null,
+        "active": 1
+      }
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successAdded",
+      "msgi18n": true,
+      "key": "<redacted-api-key>",
+      "keyID": 1
+    }
+  },
+  "getAPIKeyList.after": {
+    "args": [],
+    "ack": {
+      "ok": true
+    }
+  },
+  "setSettings": {
+    "args": [
+      {
+        "serverTimezone": "UTC"
+      },
+      "<redacted>"
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "Saved.",
+      "msgi18n": true
+    }
+  },
+  "loginByToken.invalid": {
+    "args": [
+      "not-a-token"
+    ],
+    "ack": {
+      "ok": false,
+      "msg": "authInvalidToken",
+      "msgi18n": true
+    }
+  },
+  "deleteStatusPage": {
+    "args": [
+      "capture"
+    ],
+    "ack": {
+      "ok": true
+    }
+  },
+  "deleteMaintenance": {
+    "args": [
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successDeleted",
+      "msgi18n": true
+    }
+  },
+  "deleteMonitor": {
+    "args": [
+      1
+    ],
+    "ack": {
+      "ok": true,
+      "msg": "successDeleted",
+      "msgi18n": true
+    }
+  },
+  "loginByToken.valid": {
+    "args": [
+      "<redacted>"
+    ],
+    "ack": {
+      "ok": true
+    }
+  }
+}
