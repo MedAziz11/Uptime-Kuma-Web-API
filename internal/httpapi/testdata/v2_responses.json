@@ -1,0 +1,2758 @@
+{
+ "secret_key": "conformance-secret-key-conformance-secret-key",
+ "admin_password": "admin-password",
+ "tokens": {
+  "expired": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTU5OTk5MDAwMCwiZXhwIjoxNjAwMDAwMDAwfQ.e5WiuiUVgkzIHdkFzieXUPRafJdNSKe3vybEvarxXvM",
+  "forged": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6NDEwMjQ0NDgwMH0.ZkJpdDcDz1CCSKqhwGNN1cVbpCx8LdVVyIoZgbbYOzc",
+  "ghost": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnaG9zdCIsImV4cCI6NDEwMjQ0NDgwMH0.eWl8ksnMIOgK8siCnh2iodoiRJpG_-36eHOgMnqcbnA",
+  "no_exp": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiJ9.cfQ-_vyzpF3vIZoIVRYBlorhFyQpx-k10QjrWlYVqZc",
+  "no_sub": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDB9.QlyE9MsGwmrY1dl7K0T_o_TP8m0p6zyMYKugqFVe8W4",
+  "empty_sub": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIiLCJleHAiOjQxMDI0NDQ4MDB9.SizM3kH6zik7TEPA3mnqb3RKTNkjiNyP0RsRLIXILFA",
+  "int_sub": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImV4cCI6NDEwMjQ0NDgwMH0.VQ2wpvnNWYzirFeUGiHjbtsYNUC9IexjhMFJCr2Tw00",
+  "hs512": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6NDEwMjQ0NDgwMH0.CAyqqdtySUzAhtCAFsBtqSTHBiYZTuXIYX24D-4uM7OTXFyWW_rDOuOS4_sY5Nsf6EfoYdUSks6Mu0wkNUT2tQ",
+  "alg_none": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJhZG1pbiIsImV4cCI6NDEwMjQ0NDgwMH0.",
+  "future_iat": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6NDEwMjQ0NDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.6eD6ojYvzrVMsP9-KqAqLq1cqkWqChpeD9EEVTEckCM",
+  "future_nbf": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsIm5iZiI6NDEwMjQ0NDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.I9P5RNJgPv-om-VBBamuQMuPp0TmXOKdDWnnbGYBcAk",
+  "with_aud": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImF1ZCI6IngiLCJleHAiOjQxMDI0NDQ4MDB9.rOJY6ajsTX7Nja_4MbuYidPlCCL1RwukP-kGVyNAXzU",
+  "admin_long": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.SXFXvMRvaaNjIE-tbkHjEKTofKQxJBsFGoqAwFQ1xYw"
+ },
+ "scenarios": {
+  "main": {
+   "cors_origins": [],
+   "steps": [
+    {
+     "name": "health",
+     "method": "GET",
+     "path": "/health",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "status": "ok",
+      "version": "2.0.0"
+     }
+    },
+    {
+     "name": "health head",
+     "method": "HEAD",
+     "path": "/health",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 405,
+     "response_headers": {
+      "content-type": "application/json",
+      "allow": "GET"
+     },
+     "response_body": null
+    },
+    {
+     "name": "health post",
+     "method": "POST",
+     "path": "/health",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 405,
+     "response_headers": {
+      "content-type": "application/json",
+      "allow": "GET"
+     },
+     "response_body": {
+      "detail": "Method Not Allowed"
+     }
+    },
+    {
+     "name": "root redirects to docs",
+     "method": "GET",
+     "path": "/",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 307,
+     "response_headers": {
+      "location": "/docs"
+     },
+     "response_body": ""
+    },
+    {
+     "name": "docs",
+     "method": "GET",
+     "path": "/docs",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": true,
+     "status": 200,
+     "response_headers": {
+      "content-type": "text/html; charset=utf-8"
+     },
+     "response_body": null
+    },
+    {
+     "name": "openapi",
+     "method": "GET",
+     "path": "/openapi.json",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": true,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": null
+    },
+    {
+     "name": "unknown path without token",
+     "method": "GET",
+     "path": "/nope",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 404,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "Not Found"
+     }
+    },
+    {
+     "name": "unknown path with token",
+     "method": "GET",
+     "path": "/nope",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 404,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "Not Found"
+     }
+    },
+    {
+     "name": "login admin",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin&password=admin-password",
+     "save_token": "admin",
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "access_token": "<jwt>",
+      "token_type": "bearer"
+     }
+    },
+    {
+     "name": "login wrong password",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin&password=wrong",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Incorrect username or password"
+     }
+    },
+    {
+     "name": "login unknown user",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=nobody&password=admin-password",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Incorrect username or password"
+     }
+    },
+    {
+     "name": "login long password",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin&password=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Incorrect username or password"
+     }
+    },
+    {
+     "name": "login empty password",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin&password=",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Field required",
+        "input": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "login empty username",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=&password=admin-password",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "Field required",
+        "input": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "login missing password",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Field required",
+        "input": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "login missing both",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "Field required",
+        "input": null
+       },
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Field required",
+        "input": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "login no body",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "Field required",
+        "input": null
+       },
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Field required",
+        "input": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "login json body",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/json"
+     },
+     "body": "{\"username\": \"admin\", \"password\": \"admin-password\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "Field required",
+        "input": null
+       },
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Field required",
+        "input": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "login grant_type password",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin&password=admin-password&grant_type=password",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "access_token": "<jwt>",
+      "token_type": "bearer"
+     }
+    },
+    {
+     "name": "login grant_type other",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin&password=admin-password&grant_type=client",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_pattern_mismatch",
+        "loc": [
+         "body",
+         "grant_type"
+        ],
+        "msg": "String should match pattern '^password$'",
+        "input": "client",
+        "ctx": {
+         "pattern": "^password$"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "login with scope",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin&password=admin-password&scope=a%20b&client_id=c",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "access_token": "<jwt>",
+      "token_type": "bearer"
+     }
+    },
+    {
+     "name": "login percent-encoded",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=adm%69n&password=admin%2Dpassword",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "access_token": "<jwt>",
+      "token_type": "bearer"
+     }
+    },
+    {
+     "name": "login multipart",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "multipart/form-data; boundary=conformance-boundary"
+     },
+     "body": "--conformance-boundary\r\nContent-Disposition: form-data; name=\"username\"\r\n\r\nadmin\r\n--conformance-boundary\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\nadmin-password\r\n--conformance-boundary--\r\n",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "access_token": "<jwt>",
+      "token_type": "bearer"
+     }
+    },
+    {
+     "name": "login get",
+     "method": "GET",
+     "path": "/login/access-token",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 405,
+     "response_headers": {
+      "content-type": "application/json",
+      "allow": "POST"
+     },
+     "response_body": {
+      "detail": "Method Not Allowed"
+     }
+    },
+    {
+     "name": "me without token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Not authenticated"
+     }
+    },
+    {
+     "name": "me garbage token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer garbage"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me basic scheme",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Basic YWRtaW46eA=="
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Not authenticated"
+     }
+    },
+    {
+     "name": "me bearer without token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me bearer and space",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer "
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me lower-case scheme",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 1,
+      "username": "admin",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "me extra spaces",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer   {admin}  "
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 1,
+      "username": "admin",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "me tab separator",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer\t{admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Not authenticated"
+     }
+    },
+    {
+     "name": "me expired token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {expired}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me forged token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {forged}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me ghost token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {ghost}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me no_exp token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {no_exp}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me no_sub token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {no_sub}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me empty_sub token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {empty_sub}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me int_sub token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {int_sub}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me hs512 token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {hs512}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me alg_none token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {alg_none}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me future_iat token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {future_iat}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me future_nbf token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {future_nbf}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me with_aud token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {with_aud}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "me admin_long token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {admin_long}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 1,
+      "username": "admin",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "me",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 1,
+      "username": "admin",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "create without token",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json"
+     },
+     "body": "{\"username\":\"alice\",\"password\":\"alice-password\"}",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Not authenticated"
+     }
+    },
+    {
+     "name": "create alice",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"alice\",\"password\":\"alice-password\"}",
+     "save_token": null,
+     "html": false,
+     "status": 201,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 2,
+      "username": "alice",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "create alice again",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"alice\",\"password\":\"other-password\"}",
+     "save_token": null,
+     "html": false,
+     "status": 409,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "Username already exists"
+     }
+    },
+    {
+     "name": "create short username",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"al\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_too_short",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "String should have at least 3 characters",
+        "input": "al",
+        "ctx": {
+         "min_length": 3
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create long username",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"a234567890123456789012\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_too_long",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "String should have at most 20 characters",
+        "input": "a234567890123456789012",
+        "ctx": {
+         "max_length": 20
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create username with space",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"has space\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_pattern_mismatch",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "String should match pattern '^[A-Za-z0-9_.-]+$'",
+        "input": "has space",
+        "ctx": {
+         "pattern": "^[A-Za-z0-9_.-]+$"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create unicode username",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"élise\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_pattern_mismatch",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "String should match pattern '^[A-Za-z0-9_.-]+$'",
+        "input": "élise",
+        "ctx": {
+         "pattern": "^[A-Za-z0-9_.-]+$"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create short password",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"dave\",\"password\":\"short\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_too_short",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "String should have at least 8 characters",
+        "input": "short",
+        "ctx": {
+         "min_length": 8
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create 73-byte password",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\": \"dave\", \"password\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "value_error",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Value error, password must be at most 72 bytes long",
+        "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "ctx": {
+         "error": {}
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create 37 two-byte chars",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\": \"dave\", \"password\": \"\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "value_error",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Value error, password must be at most 72 bytes long",
+        "input": "ééééééééééééééééééééééééééééééééééééé",
+        "ctx": {
+         "error": {}
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create both invalid",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"a b\",\"password\":\"short\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_pattern_mismatch",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "String should match pattern '^[A-Za-z0-9_.-]+$'",
+        "input": "a b",
+        "ctx": {
+         "pattern": "^[A-Za-z0-9_.-]+$"
+        }
+       },
+       {
+        "type": "string_too_short",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "String should have at least 8 characters",
+        "input": "short",
+        "ctx": {
+         "min_length": 8
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create missing password",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"dave\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Field required",
+        "input": {
+         "username": "dave"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create missing both",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "Field required",
+        "input": {}
+       },
+       {
+        "type": "missing",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Field required",
+        "input": {}
+       }
+      ]
+     }
+    },
+    {
+     "name": "create int username",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":123,\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_type",
+        "loc": [
+         "body",
+         "username"
+        ],
+        "msg": "Input should be a valid string",
+        "input": 123
+       }
+      ]
+     }
+    },
+    {
+     "name": "create null password",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"dave\",\"password\":null}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_type",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Input should be a valid string",
+        "input": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "create bool password",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"dave\",\"password\":true}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "string_type",
+        "loc": [
+         "body",
+         "password"
+        ],
+        "msg": "Input should be a valid string",
+        "input": true
+       }
+      ]
+     }
+    },
+    {
+     "name": "create array body",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "[]",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "model_attributes_type",
+        "loc": [
+         "body"
+        ],
+        "msg": "Input should be a valid dictionary or object to extract fields from",
+        "input": []
+       }
+      ]
+     }
+    },
+    {
+     "name": "create string body",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "\"text\"",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "model_attributes_type",
+        "loc": [
+         "body"
+        ],
+        "msg": "Input should be a valid dictionary or object to extract fields from",
+        "input": "text"
+       }
+      ]
+     }
+    },
+    {
+     "name": "create number body",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "42",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "model_attributes_type",
+        "loc": [
+         "body"
+        ],
+        "msg": "Input should be a valid dictionary or object to extract fields from",
+        "input": 42
+       }
+      ]
+     }
+    },
+    {
+     "name": "create null body",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "null",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "model_attributes_type",
+        "loc": [
+         "body"
+        ],
+        "msg": "Input should be a valid dictionary or object to extract fields from",
+        "input": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "create malformed json",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\": \"dave\",",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "json_invalid",
+        "loc": [
+         "body",
+         20
+        ],
+        "msg": "JSON decode error",
+        "input": {},
+        "ctx": {
+         "error": "Expecting property name enclosed in double quotes"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create empty body",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "missing",
+        "loc": [
+         "body"
+        ],
+        "msg": "Field required",
+        "input": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "create form body",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "username=dave&password=long-enough",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "model_attributes_type",
+        "loc": [
+         "body"
+        ],
+        "msg": "Input should be a valid dictionary or object to extract fields from",
+        "input": "username=dave&password=long-enough"
+       }
+      ]
+     }
+    },
+    {
+     "name": "create no content type",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"dave\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "model_attributes_type",
+        "loc": [
+         "body"
+        ],
+        "msg": "Input should be a valid dictionary or object to extract fields from",
+        "input": "{\"username\":\"dave\",\"password\":\"long-enough\"}"
+       }
+      ]
+     }
+    },
+    {
+     "name": "create text content type",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "text/plain",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"dave\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "model_attributes_type",
+        "loc": [
+         "body"
+        ],
+        "msg": "Input should be a valid dictionary or object to extract fields from",
+        "input": "{\"username\":\"dave\",\"password\":\"long-enough\"}"
+       }
+      ]
+     }
+    },
+    {
+     "name": "create json charset",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json; charset=utf-8",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"dave\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 201,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 3,
+      "username": "dave",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "create extra field",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"erin\",\"password\":\"long-enough\",\"admin\":true}",
+     "save_token": null,
+     "html": false,
+     "status": 201,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 4,
+      "username": "erin",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "create 72-byte password",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\": \"frank\", \"password\": \"\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\\u5bc6\"}",
+     "save_token": null,
+     "html": false,
+     "status": 201,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 5,
+      "username": "frank",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "create dotted username",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"g.h-i_j\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 201,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 6,
+      "username": "g.h-i_j",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "create invalid token",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {expired}"
+     },
+     "body": "{\"username\":\"dave\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "create malformed json without token",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json"
+     },
+     "body": "{\"username\":",
+     "save_token": null,
+     "html": false,
+     "status": 422,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": [
+       {
+        "type": "json_invalid",
+        "loc": [
+         "body",
+         12
+        ],
+        "msg": "JSON decode error",
+        "input": {},
+        "ctx": {
+         "error": "Expecting value"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "create trailing slash",
+     "method": "POST",
+     "path": "/users/",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "{\"username\":\"zed\",\"password\":\"long-enough\"}",
+     "save_token": null,
+     "html": false,
+     "status": 307,
+     "response_headers": {
+      "location": "http://testserver/users"
+     },
+     "response_body": ""
+    },
+    {
+     "name": "login alice",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=alice&password=alice-password",
+     "save_token": "alice",
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "access_token": "<jwt>",
+      "token_type": "bearer"
+     }
+    },
+    {
+     "name": "alice me",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {alice}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 2,
+      "username": "alice",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "alice lists users",
+     "method": "GET",
+     "path": "/users",
+     "headers": {
+      "Authorization": "Bearer {alice}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 403,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "Admin privileges required"
+     }
+    },
+    {
+     "name": "alice creates a user",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {alice}"
+     },
+     "body": "{\"username\":\"bob\",\"password\":\"bob-password\"}",
+     "save_token": null,
+     "html": false,
+     "status": 403,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "Admin privileges required"
+     }
+    },
+    {
+     "name": "alice creates an invalid user",
+     "method": "POST",
+     "path": "/users",
+     "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {alice}"
+     },
+     "body": "{\"username\":\"b\"}",
+     "save_token": null,
+     "html": false,
+     "status": 403,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "Admin privileges required"
+     }
+    },
+    {
+     "name": "alice gets admin",
+     "method": "GET",
+     "path": "/users/admin",
+     "headers": {
+      "Authorization": "Bearer {alice}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 403,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "Admin privileges required"
+     }
+    },
+    {
+     "name": "alice deletes admin",
+     "method": "DELETE",
+     "path": "/users/admin",
+     "headers": {
+      "Authorization": "Bearer {alice}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 403,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "Admin privileges required"
+     }
+    },
+    {
+     "name": "list users",
+     "method": "GET",
+     "path": "/users",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": [
+      {
+       "id": 1,
+       "username": "admin",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 2,
+       "username": "alice",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 3,
+       "username": "dave",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 4,
+       "username": "erin",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 5,
+       "username": "frank",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 6,
+       "username": "g.h-i_j",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      }
+     ]
+    },
+    {
+     "name": "list users trailing slash",
+     "method": "GET",
+     "path": "/users/",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 307,
+     "response_headers": {
+      "location": "http://testserver/users"
+     },
+     "response_body": ""
+    },
+    {
+     "name": "get alice",
+     "method": "GET",
+     "path": "/users/alice",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 2,
+      "username": "alice",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "get unknown user",
+     "method": "GET",
+     "path": "/users/nobody",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 404,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "User nobody not found"
+     }
+    },
+    {
+     "name": "get encoded space",
+     "method": "GET",
+     "path": "/users/a%20b",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 404,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "User a b not found"
+     }
+    },
+    {
+     "name": "get encoded slash",
+     "method": "GET",
+     "path": "/users/a%2Fb",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 404,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "Not Found"
+     }
+    },
+    {
+     "name": "get without token",
+     "method": "GET",
+     "path": "/users/alice",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Not authenticated"
+     }
+    },
+    {
+     "name": "put user",
+     "method": "PUT",
+     "path": "/users/alice",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 405,
+     "response_headers": {
+      "content-type": "application/json",
+      "allow": "GET"
+     },
+     "response_body": {
+      "detail": "Method Not Allowed"
+     }
+    },
+    {
+     "name": "delete admin",
+     "method": "DELETE",
+     "path": "/users/admin",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 400,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "The admin user cannot be deleted"
+     }
+    },
+    {
+     "name": "delete unknown user",
+     "method": "DELETE",
+     "path": "/users/nobody",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 404,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "User nobody not found"
+     }
+    },
+    {
+     "name": "delete without token",
+     "method": "DELETE",
+     "path": "/users/alice",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Not authenticated"
+     }
+    },
+    {
+     "name": "delete alice",
+     "method": "DELETE",
+     "path": "/users/alice",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "message": "Deleted user alice"
+     }
+    },
+    {
+     "name": "deleted user's token",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {alice}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Invalid or expired token"
+     }
+    },
+    {
+     "name": "deleted user logs in",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=alice&password=alice-password",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Incorrect username or password"
+     }
+    },
+    {
+     "name": "delete alice again",
+     "method": "DELETE",
+     "path": "/users/alice",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 404,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "detail": "User alice not found"
+     }
+    },
+    {
+     "name": "options without cors",
+     "method": "OPTIONS",
+     "path": "/users",
+     "headers": {
+      "Origin": "https://dashboard.example.com",
+      "Access-Control-Request-Method": "GET"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 405,
+     "response_headers": {
+      "content-type": "application/json",
+      "allow": "POST"
+     },
+     "response_body": {
+      "detail": "Method Not Allowed"
+     }
+    },
+    {
+     "name": "list users at the end",
+     "method": "GET",
+     "path": "/users",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": [
+      {
+       "id": 1,
+       "username": "admin",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 3,
+       "username": "dave",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 4,
+       "username": "erin",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 5,
+       "username": "frank",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 6,
+       "username": "g.h-i_j",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      }
+     ]
+    }
+   ]
+  },
+  "cors": {
+   "cors_origins": [
+    "https://dashboard.example.com"
+   ],
+   "steps": [
+    {
+     "name": "allowed origin",
+     "method": "GET",
+     "path": "/health",
+     "headers": {
+      "Origin": "https://dashboard.example.com"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json",
+      "vary": "Origin",
+      "access-control-allow-origin": "https://dashboard.example.com",
+      "access-control-allow-credentials": "true"
+     },
+     "response_body": {
+      "status": "ok",
+      "version": "2.0.0"
+     }
+    },
+    {
+     "name": "other origin",
+     "method": "GET",
+     "path": "/health",
+     "headers": {
+      "Origin": "https://evil.example.com"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json",
+      "vary": "Origin",
+      "access-control-allow-credentials": "true"
+     },
+     "response_body": {
+      "status": "ok",
+      "version": "2.0.0"
+     }
+    },
+    {
+     "name": "no origin",
+     "method": "GET",
+     "path": "/health",
+     "headers": {},
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json",
+      "vary": "Origin"
+     },
+     "response_body": {
+      "status": "ok",
+      "version": "2.0.0"
+     }
+    },
+    {
+     "name": "preflight",
+     "method": "OPTIONS",
+     "path": "/users",
+     "headers": {
+      "Origin": "https://dashboard.example.com",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "authorization,content-type"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Request-Private-Network",
+      "access-control-allow-origin": "https://dashboard.example.com",
+      "access-control-allow-credentials": "true",
+      "access-control-allow-methods": "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, QUERY",
+      "access-control-allow-headers": "authorization,content-type",
+      "access-control-max-age": "600"
+     },
+     "response_body": "OK"
+    },
+    {
+     "name": "preflight unknown path",
+     "method": "OPTIONS",
+     "path": "/monitors",
+     "headers": {
+      "Origin": "https://dashboard.example.com",
+      "Access-Control-Request-Method": "GET"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Request-Private-Network",
+      "access-control-allow-origin": "https://dashboard.example.com",
+      "access-control-allow-credentials": "true",
+      "access-control-allow-methods": "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, QUERY",
+      "access-control-max-age": "600"
+     },
+     "response_body": "OK"
+    },
+    {
+     "name": "preflight other origin",
+     "method": "OPTIONS",
+     "path": "/users",
+     "headers": {
+      "Origin": "https://evil.example.com",
+      "Access-Control-Request-Method": "POST"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 400,
+     "response_headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Request-Private-Network",
+      "access-control-allow-credentials": "true",
+      "access-control-allow-methods": "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, QUERY",
+      "access-control-max-age": "600"
+     },
+     "response_body": "Disallowed CORS origin"
+    },
+    {
+     "name": "preflight without request method",
+     "method": "OPTIONS",
+     "path": "/users",
+     "headers": {
+      "Origin": "https://dashboard.example.com"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 405,
+     "response_headers": {
+      "content-type": "application/json",
+      "allow": "POST",
+      "vary": "Origin",
+      "access-control-allow-origin": "https://dashboard.example.com",
+      "access-control-allow-credentials": "true"
+     },
+     "response_body": {
+      "detail": "Method Not Allowed"
+     }
+    },
+    {
+     "name": "error with allowed origin",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Origin": "https://dashboard.example.com"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer",
+      "vary": "Origin",
+      "access-control-allow-origin": "https://dashboard.example.com",
+      "access-control-allow-credentials": "true"
+     },
+     "response_body": {
+      "detail": "Not authenticated"
+     }
+    },
+    {
+     "name": "login with allowed origin",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Origin": "https://dashboard.example.com"
+     },
+     "body": "username=admin&password=admin-password",
+     "save_token": "admin",
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json",
+      "vary": "Origin",
+      "access-control-allow-origin": "https://dashboard.example.com",
+      "access-control-allow-credentials": "true"
+     },
+     "response_body": {
+      "access_token": "<jwt>",
+      "token_type": "bearer"
+     }
+    }
+   ]
+  },
+  "cors_any": {
+   "cors_origins": [
+    "*"
+   ],
+   "steps": [
+    {
+     "name": "any origin",
+     "method": "GET",
+     "path": "/health",
+     "headers": {
+      "Origin": "https://dashboard.example.com"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json",
+      "vary": "Origin",
+      "access-control-allow-origin": "https://dashboard.example.com",
+      "access-control-allow-credentials": "true"
+     },
+     "response_body": {
+      "status": "ok",
+      "version": "2.0.0"
+     }
+    },
+    {
+     "name": "any origin with cookie",
+     "method": "GET",
+     "path": "/health",
+     "headers": {
+      "Origin": "https://dashboard.example.com",
+      "Cookie": "a=b"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json",
+      "vary": "Origin",
+      "access-control-allow-origin": "https://dashboard.example.com",
+      "access-control-allow-credentials": "true"
+     },
+     "response_body": {
+      "status": "ok",
+      "version": "2.0.0"
+     }
+    },
+    {
+     "name": "any origin preflight",
+     "method": "OPTIONS",
+     "path": "/users",
+     "headers": {
+      "Origin": "https://dashboard.example.com",
+      "Access-Control-Request-Method": "DELETE"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Request-Private-Network",
+      "access-control-allow-origin": "https://dashboard.example.com",
+      "access-control-allow-credentials": "true",
+      "access-control-allow-methods": "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, QUERY",
+      "access-control-max-age": "600"
+     },
+     "response_body": "OK"
+    }
+   ]
+  },
+  "upgrade_v1": {
+   "cors_origins": [],
+   "database": "internal/store/testdata/v1/db.sqlite3",
+   "steps": [
+    {
+     "name": "v1 legacy login",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=legacy&password=legacy-password",
+     "save_token": "legacy",
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "access_token": "<jwt>",
+      "token_type": "bearer"
+     }
+    },
+    {
+     "name": "v1 legacy me",
+     "method": "GET",
+     "path": "/users/me",
+     "headers": {
+      "Authorization": "Bearer {legacy}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "id": 2,
+      "username": "legacy",
+      "created_at": "<datetime:Z>",
+      "last_visit": "<datetime:Z>"
+     }
+    },
+    {
+     "name": "v1 old admin password",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin&password=old-admin-password",
+     "save_token": null,
+     "html": false,
+     "status": 401,
+     "response_headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+     },
+     "response_body": {
+      "detail": "Incorrect username or password"
+     }
+    },
+    {
+     "name": "v1 admin login",
+     "method": "POST",
+     "path": "/login/access-token",
+     "headers": {
+      "Content-Type": "application/x-www-form-urlencoded"
+     },
+     "body": "username=admin&password=admin-password",
+     "save_token": "admin",
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": {
+      "access_token": "<jwt>",
+      "token_type": "bearer"
+     }
+    },
+    {
+     "name": "v1 list users",
+     "method": "GET",
+     "path": "/users",
+     "headers": {
+      "Authorization": "Bearer {admin}"
+     },
+     "body": "",
+     "save_token": null,
+     "html": false,
+     "status": 200,
+     "response_headers": {
+      "content-type": "application/json"
+     },
+     "response_body": [
+      {
+       "id": 1,
+       "username": "admin",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      },
+      {
+       "id": 2,
+       "username": "legacy",
+       "created_at": "<datetime:Z>",
+       "last_visit": "<datetime:Z>"
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
