@@ -1,0 +1,54 @@
+{
+  "v1": {
+    "users": [
+      {
+        "username": "admin",
+        "password": "old-admin-password"
+      },
+      {
+        "username": "legacy",
+        "password": "legacy-password"
+      }
+    ]
+  },
+  "v2.0": {
+    "users": [
+      {
+        "username": "admin",
+        "password": "v2-admin-password"
+      },
+      {
+        "username": "alice",
+        "password": "alice-password"
+      },
+      {
+        "username": "carol",
+        "password": "pässwörd-密码"
+      }
+    ],
+    "deleted": [
+      "bob"
+    ],
+    "listed": [
+      {
+        "id": 1,
+        "username": "admin",
+        "created_at": "2026-11-13T15:43:41.808921Z",
+        "last_visit": "2026-11-13T15:43:42.302149Z"
+      },
+      {
+        "id": 2,
+        "username": "alice",
+        "created_at": "2026-11-13T15:43:42.625748Z",
+        "last_visit": "2026-11-13T15:43:43.713693Z"
+      },
+      {
+        "id": 4,
+        "username": "carol",
+        "created_at": "2026-11-13T15:43:43.368247Z",
+        "last_visit": "2026-11-13T15:43:43.368266Z"
+      }
+    ],
+    "alice_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbGljZSIsImlhdCI6MTc5NDU4NDYyMywiZXhwIjo0OTQ4MTg0NjIzfQ.INcCr2wui6bzWh_1GvrPKEmEehp1ME_jNvLkIxpEfU0"
+  }
+}

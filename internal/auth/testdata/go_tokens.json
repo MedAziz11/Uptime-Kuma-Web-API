@@ -1,0 +1,25 @@
+{
+ "key": "go-minted-key-go-minted-key-go-minted-key",
+ "tokens": [
+  {
+   "sub": "alice",
+   "ttl_seconds": 3153600000,
+   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbGljZSIsImlhdCI6MTc5NDU4MDAwMCwiZXhwIjo0OTQ4MTgwMDAwfQ.4LAa513scdFEX1XemtkzoBWDVzLoUMymQ93vUrzZ6cg"
+  },
+  {
+   "sub": "admin",
+   "ttl_seconds": 3153600000,
+   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTc5NDU4MDAwMCwiZXhwIjo0OTQ4MTgwMDAwfQ.t9EiPQJONwvmlv2oqVf6REeKG5_v9M-yGRTQ41twilM"
+  },
+  {
+   "sub": "élise",
+   "ttl_seconds": 1576800000,
+   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJcdTAwZTlsaXNlIiwiaWF0IjoxNzk0NTgwMDAwLCJleHAiOjMzNzEzODAwMDB9.d_OnV6Z_PtF8RoYVpioTbCtMiopX_LM4NWVoN9VKL9Q"
+  },
+  {
+   "sub": "g.h-i_j",
+   "ttl_seconds": 691200000,
+   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnLmgtaV9qIiwiaWF0IjoxNzk0NTgwMDAwLCJleHAiOjI0ODU3ODAwMDB9.l77GbGeQe4wmEoc77Tfq1QubhGBBa7j0kh4ZdbAEw5A"
+  }
+ ]
+}
