@@ -84,8 +84,9 @@ Dependencies point downwards only. `httpapi` depends on interfaces declared wher
 ## 5. State cache
 
 - One struct per pushed list, replaced or patched under an `RWMutex` by the reader goroutine.
-- Each list keeps its **encoded JSON** next to the decoded form, rebuilt once per change.
-  A cached `GET` writes those bytes; it does not allocate per request beyond the response.
+- Each route keeps the **encoded JSON** of its answer for one list version, built on the first
+  read of that version (once, however many requests wait for it), never from an unsynced read.
+  A cached `GET` writes those bytes; the route allocates nothing per request.
 - Responses carry a strong `ETag` (hash of the bytes); `If-None-Match` returns `304`.
 - **Read-your-writes**: every list has a version counter. A write handler notes the version before
   the call and, after a successful ack, waits (bounded by the request deadline) until the counter
@@ -97,7 +98,7 @@ Dependencies point downwards only. `httpapi` depends on interfaces declared wher
   collapsed into one call to Uptime Kuma.
 - Before the first login completes, cached reads wait for the initial state (bounded by the
   deadline) rather than returning empty lists.
-- Heartbeats are bounded per monitor (ring buffer); memory does not grow with uptime.
+- Only the latest heartbeat of each monitor is kept; memory does not grow with uptime.
 
 ## 6. HTTP layer
 

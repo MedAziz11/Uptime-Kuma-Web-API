@@ -193,18 +193,29 @@ func BenchmarkUnauthorized(b *testing.B) {
 	benchRequest(b, e.srv, authorized("/monitors", e.otherKeyToken(b)), http.StatusUnauthorized)
 }
 
-// BenchmarkGetMonitorsHandler is GET /monitors without the middleware: the
-// route alone, for a request that is already authenticated.
-func BenchmarkGetMonitorsHandler(b *testing.B) {
+// BenchmarkHandler is a cached read without the middleware: the route
+// alone, for a request that is already authenticated.
+func BenchmarkHandler(b *testing.B) {
 	e, _ := benchEnv(b)
 	u, err := e.store.User(context.Background(), AdminUsername)
 	if err != nil {
 		b.Fatal(err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/monitors", nil)
-	ctx := context.WithValue(req.Context(), infoKey, &requestInfo{id: "bench"})
-	req = req.WithContext(context.WithValue(ctx, userKey, u))
-	benchRequest(b, e.srv.mux, req, http.StatusOK)
+	for _, c := range []struct{ name, path, etag string }{
+		{"monitors", "/monitors", ""}, {"monitor", "/monitors/100", ""}, {"not_modified", "/monitors", "*"},
+	} {
+		b.Run(c.name, func(b *testing.B) {
+			req := httptest.NewRequest(http.MethodGet, c.path, nil)
+			status := http.StatusOK
+			if c.etag != "" {
+				req.Header.Set("If-None-Match", c.etag)
+				status = http.StatusNotModified
+			}
+			ctx := context.WithValue(req.Context(), infoKey, &requestInfo{id: "bench"})
+			req = req.WithContext(context.WithValue(ctx, userKey, u))
+			benchRequest(b, e.srv.mux, req, status)
+		})
+	}
 }
 
 func (e *testEnv) otherKeyToken(tb testing.TB) string {

@@ -120,6 +120,9 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 | `POST /monitors/{id}/tag` with an unknown tag | 404 `Not found` from Kuma's foreign key error | 404 `tag does not exist`, checked first | |
 | `POST /maintenance/{id}/monitors`, `DELETE /statuspages/{slug}/incident/unpin` with an unknown id or slug | Kuma's error or success | 404, checked first | Kuma would store links to nothing or answer success |
 | `ctx` of a query parameter's `greater_than` | `{"gt": 0.0}` | `{"gt": 0}` | Same number in JSON |
+| Reads served from State (`/monitors`, `/monitors/{id}`, `/notifications[/{id}]`, `/proxies[/{id}]`, `/docker_hosts[/{id}]`, `/maintenance`, `/statuspages`, `/uptime`, `/ping`, `/cert_info`, `/info`) | no validator | strong `ETag`, `Cache-Control: private, no-cache`, `If-None-Match` answers `304`; always `Content-Length` (no chunked encoding) | Response cache (`docs/performance.md`); the answers are per user, so no shared cache may keep them, and Kuma may push a change at any time, so clients revalidate |
+| Login or user creation while the bcrypt slots are busy for 3 s | waited | `503 Too many logins in progress, retry later`, `Retry-After: 1` | At most a quarter of the CPUs run bcrypt at once |
+| Login or authenticated request in the first moments after start | (not served yet) | waits for the admin user setup, at most 3 s, then `503 The API is starting, retry later` | `/health` answers before the bcrypt check of `ADMIN_PASSWORD` ends |
 
 ## How 3.0 reads and writes (phase 3)
 
@@ -129,7 +132,12 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 - A write returns once a following read reflects it: for a list Kuma pushes after the command,
   the write waits (bounded by `KUMA_TIMEOUT`) until the list's version grows; status pages are
   read back with `getStatusPage`; after a tag edit or delete the monitor list is fetched again
-  (`getMonitorList`), since monitors carry their tags.
+  (`getMonitorList`), since monitors carry their tags. These refreshes are coalesced: at most one
+  runs, and writers that arrive meanwhile share the next one, which starts after their write.
+- Reads of pushed lists are answered from bodies encoded once per list version (`ETag`, `304`);
+  reads not served from State that are identical and concurrent share one call to Kuma, joining
+  only a call sent after every write that had returned.
+- `State` keeps the latest heartbeat of each monitor, not the 100 Kuma sends at login.
 - `GET /api/status-page/{slug}` is cached by Kuma for minutes and the cache is not cleared by
   `postIncident` or `unpinIncident`; Kuma's cache honours `Cache-Control: no-cache`, which the API
   sends.
