@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -38,6 +39,13 @@ type Client struct {
 	verifyDelay time.Duration // debounce before verifying
 
 	reads flightGroup // identical concurrent reads share one call
+
+	// Coalesced monitor list refreshes (refreshMonitors): at most one runs.
+	refreshMu      sync.Mutex
+	refreshRunning bool
+	refreshStarted uint64        // refreshes started
+	refreshDone    uint64        // the number of the last refresh finished
+	refreshChanged chan struct{} // closed and replaced when one finishes
 }
 
 // Bounds of the monitor list verification.
@@ -51,7 +59,8 @@ const (
 // with the session (Close).
 func NewClient(s *Session) *Client {
 	st := NewState()
-	c := &Client{s: s, st: st, timeout: s.timeout, log: s.log, verify: make(chan struct{}, 1), verifyDelay: verifyDelay}
+	c := &Client{s: s, st: st, timeout: s.timeout, log: s.log, verify: make(chan struct{}, 1), verifyDelay: verifyDelay,
+		refreshChanged: make(chan struct{})}
 	st.onRacedList = c.racedList
 	st.Register(s)
 	s.wg.Add(1)
@@ -227,12 +236,52 @@ func (c *Client) DeleteTag(ctx context.Context, id int64) (json.RawMessage, erro
 	return ack, nil
 }
 
-// refreshMonitors asks for the monitor list, which Uptime Kuma pushes
+// refreshMonitors fetches the monitor list again, covering everything
+// written before the call. Refreshes are coalesced: at most one runs, and a
+// caller that arrives while one runs waits for the next one, which starts
+// after its write, rather than for the one already running, which may have
+// read the list before it. Concurrent refreshes would each see the others'
+// lists as suspect and fetch again (fetchMonitors); with 200 monitors on a
+// real Uptime Kuma, 12 concurrent tag writers made every refresh time out.
+//
+// The refresh runs on the goroutine of the caller that starts it, with a
+// context that does not end with that caller's, since others wait for it;
+// it is bounded by the session's timeout. Waiters honour their own ctx.
+func (c *Client) refreshMonitors(ctx context.Context) {
+	c.refreshMu.Lock()
+	need := c.refreshStarted + 1 // the first refresh to start from now on
+	for c.refreshDone < need {
+		if !c.refreshRunning {
+			c.refreshRunning = true
+			c.refreshStarted++
+			n := c.refreshStarted
+			c.refreshMu.Unlock()
+			c.fetchMonitors(context.WithoutCancel(ctx))
+			c.refreshMu.Lock()
+			c.refreshRunning = false
+			c.refreshDone = n
+			close(c.refreshChanged)
+			c.refreshChanged = make(chan struct{})
+			continue
+		}
+		changed := c.refreshChanged
+		c.refreshMu.Unlock()
+		select {
+		case <-changed:
+		case <-ctx.Done():
+			return
+		}
+		c.refreshMu.Lock()
+	}
+	c.refreshMu.Unlock()
+}
+
+// fetchMonitors asks for the monitor list, which Uptime Kuma pushes
 // before it answers. The list is trusted only if it was the one monitor
 // push between the request and the answer: an update or deletion applied
 // meanwhile may be newer than the list, and another list may be a stale
 // one. Then it asks again, a bounded number of times.
-func (c *Client) refreshMonitors(ctx context.Context) {
+func (c *Client) fetchMonitors(ctx context.Context) {
 	c.refreshing.Add(1)
 	defer c.refreshing.Add(-1)
 	for range maxRefreshRounds {
