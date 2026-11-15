@@ -150,7 +150,9 @@ func (s *Server) kumaError(ctx context.Context, err error) error {
 		s.log.WarnContext(ctx, "Uptime Kuma did not answer in time", "request_id", id, "error", err)
 		return newError(http.StatusGatewayTimeout, "Uptime Kuma did not answer in time")
 	case errors.Is(err, kuma.ErrUnavailable):
-		s.log.ErrorContext(ctx, "Uptime Kuma is unavailable", "request_id", id, "error", err)
+		// The session logs the connection's state changes, and the access
+		// log each 503: one line per request would flood an outage.
+		s.log.DebugContext(ctx, "Uptime Kuma is unavailable", "request_id", id, "error", err)
 		switch {
 		case errors.Is(err, kuma.ErrTwoFactorRequired):
 			return newError(http.StatusServiceUnavailable, "the Uptime Kuma account requires two-factor authentication, which the API cannot use")

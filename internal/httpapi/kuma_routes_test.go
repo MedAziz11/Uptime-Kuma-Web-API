@@ -478,6 +478,15 @@ func TestKumaRoutesUnavailable(t *testing.T) {
 			t.Errorf("GET %s: %d %v", path, status, v)
 		}
 	}
+	// One line per request at DEBUG: an outage must not flood the log.
+	for line := range strings.Lines(e.logs.String()) {
+		if strings.Contains(line, `"msg":"Uptime Kuma is unavailable"`) && !strings.Contains(line, `"level":"DEBUG"`) {
+			t.Fatalf("not at DEBUG: %s", line)
+		}
+	}
+	if !strings.Contains(e.logs.String(), `"msg":"Uptime Kuma is unavailable"`) {
+		t.Fatal("not logged at all")
+	}
 }
 
 func TestKumaErrorMapping(t *testing.T) {
