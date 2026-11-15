@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
@@ -51,7 +52,15 @@ type Options struct {
 	MaxBodyBytes int64        // default DefaultMaxBodyBytes
 	Logger       *slog.Logger // default: discard
 	Version      string       // reported by /health and the OpenAPI document
+	// PasswordWait bounds how long a login or user creation waits for a
+	// bcrypt slot before a 503; default DefaultPasswordWait.
+	PasswordWait time.Duration
 }
+
+// DefaultPasswordWait is the default of Options.PasswordWait: about ten
+// bcrypt checks at cost 12, so that a login waits through a short burst and
+// a flood is answered quickly.
+const DefaultPasswordWait = 3 * time.Second
 
 // Server is the HTTP handler of the API.
 type Server struct {
@@ -61,6 +70,8 @@ type Server struct {
 	kuma      Kuma
 	log       *slog.Logger
 	version   string
+
+	passwordWait time.Duration
 
 	mux     *http.ServeMux
 	api     huma.API
@@ -83,6 +94,9 @@ func New(opts Options) (*Server, error) {
 	if opts.Logger == nil {
 		opts.Logger = slog.New(slog.DiscardHandler)
 	}
+	if opts.PasswordWait <= 0 {
+		opts.PasswordWait = DefaultPasswordWait
+	}
 	s := &Server{
 		users:     opts.Users,
 		passwords: opts.Passwords,
@@ -90,7 +104,9 @@ func New(opts Options) (*Server, error) {
 		kuma:      opts.Kuma,
 		log:       opts.Logger,
 		version:   opts.Version,
-		mux:       http.NewServeMux(),
+
+		passwordWait: opts.PasswordWait,
+		mux:          http.NewServeMux(),
 	}
 	s.api = humago.New(s.mux, s.humaConfig())
 	docs := s.humaConfig()

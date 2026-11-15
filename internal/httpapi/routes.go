@@ -13,6 +13,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/auth"
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/store"
 )
 
@@ -449,7 +450,11 @@ func (s *Server) login(ctx context.Context, in *rawBodyInput) (*tokenOutput, err
 	}
 	// An unknown user is checked against a dummy hash, so that the answer
 	// takes as long as for a wrong password.
-	if !s.passwords.Verify(form.Password, hash) {
+	ok, err := s.verifyPassword(ctx, form.Password, hash)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		s.log.InfoContext(ctx, "failed login", "request_id", infoFrom(ctx).id, "username", form.Username)
 		return nil, errBadCredentials()
 	}
@@ -460,6 +465,37 @@ func (s *Server) login(ctx context.Context, in *rawBodyInput) (*tokenOutput, err
 		return nil, s.internal(ctx, "update last visit", err)
 	}
 	return &tokenOutput{Body: Token{AccessToken: s.tokens.Issue(user.Username), TokenType: "bearer"}}, nil
+}
+
+// verifyPassword and hashPassword run bcrypt, waiting at most passwordWait
+// for one of the bounded bcrypt slots (auth.Passwords); a request that gets
+// none in time is answered 503 with Retry-After instead of waiting longer.
+func (s *Server) verifyPassword(ctx context.Context, password, hash string) (bool, error) {
+	wctx, cancel := context.WithTimeout(ctx, s.passwordWait)
+	defer cancel()
+	ok, err := s.passwords.VerifyContext(wctx, password, hash)
+	if err != nil {
+		return false, s.passwordError(ctx, err)
+	}
+	return ok, nil
+}
+
+func (s *Server) hashPassword(ctx context.Context, password string) (string, error) {
+	wctx, cancel := context.WithTimeout(ctx, s.passwordWait)
+	defer cancel()
+	hash, err := s.passwords.HashContext(wctx, password)
+	if err != nil {
+		return "", s.passwordError(ctx, err)
+	}
+	return hash, nil
+}
+
+func (s *Server) passwordError(ctx context.Context, err error) error {
+	if errors.Is(err, auth.ErrBusy) {
+		s.log.WarnContext(ctx, "no bcrypt slot in time", "request_id", infoFrom(ctx).id)
+		return errPasswordsBusy()
+	}
+	return s.internal(ctx, "hash password", err)
 }
 
 func (s *Server) createUser(ctx context.Context, in *rawBodyInput) (*userOutput, error) {
@@ -475,9 +511,9 @@ func (s *Server) createUser(ctx context.Context, in *rawBodyInput) (*userOutput,
 	if _, err := s.users.User(ctx, username); err == nil {
 		return nil, newError(http.StatusConflict, "Username already exists")
 	}
-	hash, err := s.passwords.Hash(password)
+	hash, err := s.hashPassword(ctx, password)
 	if err != nil {
-		return nil, s.internal(ctx, "hash password", err)
+		return nil, err
 	}
 	u, err := s.users.CreateUser(ctx, username, hash)
 	if errors.Is(err, store.ErrExists) {

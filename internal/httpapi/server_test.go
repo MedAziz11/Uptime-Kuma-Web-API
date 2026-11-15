@@ -718,3 +718,40 @@ func TestServeAndGracefulShutdown(t *testing.T) {
 		t.Fatal("no error for a closed listener")
 	}
 }
+
+// A login or user creation that gets no bcrypt slot in time is a 503 with
+// Retry-After, and they work again once a slot is free.
+func TestPasswordsWithoutABcryptSlotAre503(t *testing.T) {
+	e := newEnv(t, Options{PasswordWait: 20 * time.Millisecond})
+	token := e.login(t, "admin", "admin-password")
+	slow, err := auth.NewPasswordsLimit(10, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.srv.passwords = slow
+	for _, c := range []struct{ path, token, contentType, body string }{
+		{"/login/access-token", "", "application/x-www-form-urlencoded", "username=admin&password=admin-password"},
+		{"/users", token, "application/json", `{"username":"bob","password":"bob-password"}`},
+	} {
+		busy := make(chan struct{})
+		go func() {
+			defer close(busy)
+			slow.Hash("occupies the only slot")
+		}()
+		deadline := time.Now().Add(5 * time.Second)
+		var res *http.Response
+		for {
+			res = e.do(t, "POST", c.path, c.token, c.contentType, c.body)
+			if res.StatusCode == 503 || time.Now().After(deadline) {
+				break
+			}
+		}
+		if res.StatusCode != 503 || res.Header.Get("Retry-After") != "1" || detail(t, res) != "Too many logins in progress, retry later" {
+			t.Fatalf("%s: %d %v", c.path, res.StatusCode, res.Header)
+		}
+		<-busy
+		if res := e.do(t, "POST", c.path, c.token, c.contentType, c.body); res.StatusCode/100 != 2 {
+			t.Fatalf("%s with a free slot: %d", c.path, res.StatusCode)
+		}
+	}
+}

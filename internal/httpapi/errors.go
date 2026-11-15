@@ -52,6 +52,13 @@ func errAdminRequired() *apiError {
 	return newError(http.StatusForbidden, "Admin privileges required")
 }
 
+// errPasswordsBusy answers a login or user creation that got no bcrypt
+// slot in time (auth.Passwords bounds them).
+func errPasswordsBusy() *apiError {
+	return &apiError{status: http.StatusServiceUnavailable, Detail: "Too many logins in progress, retry later",
+		headers: http.Header{"Retry-After": []string{"1"}}}
+}
+
 func errInternal() *apiError {
 	return newError(http.StatusInternalServerError, "Internal Server Error")
 }

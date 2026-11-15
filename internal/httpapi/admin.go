@@ -32,7 +32,7 @@ func EnsureAdmin(ctx context.Context, users AdminStore, passwords *auth.Password
 	admin, err := users.User(ctx, AdminUsername)
 	switch {
 	case errors.Is(err, store.ErrNotFound):
-		hash, err := passwords.Hash(password)
+		hash, err := passwords.HashContext(ctx, password)
 		if err != nil {
 			return 0, fmt.Errorf("hash ADMIN_PASSWORD: %w", err)
 		}
@@ -42,10 +42,14 @@ func EnsureAdmin(ctx context.Context, users AdminStore, passwords *auth.Password
 		return AdminCreated, nil
 	case err != nil:
 		return 0, fmt.Errorf("read the %s user: %w", AdminUsername, err)
-	case passwords.Verify(password, admin.PasswordHash):
+	}
+	switch ok, err := passwords.VerifyContext(ctx, password, admin.PasswordHash); {
+	case err != nil:
+		return 0, fmt.Errorf("check the %s password: %w", AdminUsername, err)
+	case ok:
 		return AdminUnchanged, nil
 	}
-	hash, err := passwords.Hash(password)
+	hash, err := passwords.HashContext(ctx, password)
 	if err != nil {
 		return 0, fmt.Errorf("hash ADMIN_PASSWORD: %w", err)
 	}

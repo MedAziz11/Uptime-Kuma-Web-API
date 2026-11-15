@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -493,5 +494,59 @@ func BenchmarkSubject(b *testing.B) {
 		if _, err := tk.Subject(tok); err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+// At most the configured number of bcrypt operations run at once; the
+// others wait for a slot as long as their context allows.
+func TestBcryptConcurrencyIsBounded(t *testing.T) {
+	p, err := NewPasswordsLimit(bcrypt.MinCost, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, _ := p.Hash("password")
+	// Hold both slots.
+	r1, _ := p.acquire(context.Background())
+	r2, _ := p.acquire(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	if _, err := p.VerifyContext(ctx, "password", h); !errors.Is(err, ErrBusy) || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("verify without a slot: %v", err)
+	}
+	if _, err := p.HashContext(ctx, "password"); !errors.Is(err, ErrBusy) {
+		t.Fatalf("hash without a slot: %v", err)
+	}
+	// A waiter gets the slot that is released.
+	done := make(chan bool)
+	go func() { done <- p.Verify("password", h) }()
+	select {
+	case <-done:
+		t.Fatal("ran without a slot")
+	case <-time.After(20 * time.Millisecond):
+	}
+	r1()
+	if !<-done {
+		t.Fatal("verify failed")
+	}
+	r2()
+	if len(p.slots) != 0 {
+		t.Fatalf("%d slots held", len(p.slots))
+	}
+	if _, err := NewPasswordsLimit(bcrypt.MinCost, 0); err == nil {
+		t.Fatal("no slot accepted")
+	}
+	if DefaultConcurrency() < 1 {
+		t.Fatal("default concurrency")
+	}
+}
+
+// The precomputed dummy hash costs what a real check at DefaultCost costs.
+func TestDummyHashOfDefaultCost(t *testing.T) {
+	if cost, err := bcrypt.Cost([]byte(dummyHashDefaultCost)); err != nil || cost != DefaultCost {
+		t.Fatalf("cost %d: %v", cost, err)
+	}
+	p, err := NewPasswordsLimit(DefaultCost, 1)
+	if err != nil || string(p.dummy) != dummyHashDefaultCost {
+		t.Fatal(err)
 	}
 }
