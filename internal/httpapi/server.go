@@ -65,6 +65,11 @@ type Server struct {
 	mux     *http.ServeMux
 	api     huma.API
 	handler http.Handler
+
+	// docs documents, in api's OpenAPI document, the routes served by
+	// plain handlers (the cached reads); it serves nothing.
+	docs  huma.API
+	cache *caches
 }
 
 // New builds the API.
@@ -88,6 +93,10 @@ func New(opts Options) (*Server, error) {
 		mux:       http.NewServeMux(),
 	}
 	s.api = humago.New(s.mux, s.humaConfig())
+	docs := s.humaConfig()
+	docs.OpenAPI, docs.OpenAPIPath, docs.DocsPath = s.api.OpenAPI(), "", ""
+	s.docs = huma.NewAPI(docs, docsOnly{})
+	s.cache = newCaches()
 	s.routes(opts.MaxBodyBytes)
 
 	// Outermost first: request id, panic recovery, access log, CORS, body

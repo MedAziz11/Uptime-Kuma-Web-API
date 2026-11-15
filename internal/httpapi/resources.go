@@ -209,15 +209,6 @@ func (s *Server) object(ctx context.Context, l kuma.List, id int64, detail strin
 	return o, nil
 }
 
-// views applies view to each object.
-func views(list []json.RawMessage, view func(json.RawMessage) any) []any {
-	out := make([]any, len(list))
-	for i, o := range list {
-		out[i] = view(o)
-	}
-	return out
-}
-
 // Notifications.
 
 // notificationView is a notification as 2.0 returned it: the row with its
@@ -234,22 +225,6 @@ func notificationView(raw json.RawMessage) any {
 		}
 	}
 	return n
-}
-
-func (s *Server) listNotifications(ctx context.Context, _ *struct{}) (*jsonOutput[Notifications], error) {
-	list, err := s.objects(ctx, kuma.Notifications)
-	if err != nil {
-		return nil, err
-	}
-	return replyAs[Notifications](s, ctx, map[string]any{"notifications": views(list, notificationView)})
-}
-
-func (s *Server) getNotification(ctx context.Context, in *notificationIDParam) (*jsonOutput[NotificationResponse], error) {
-	n, err := s.object(ctx, kuma.Notifications, in.NotificationID, "notification does not exist")
-	if err != nil {
-		return nil, err
-	}
-	return replyAs[NotificationResponse](s, ctx, map[string]any{"notification": notificationView(n)})
 }
 
 // newNotification checks a notification to add or test, as 2.0 did
@@ -327,22 +302,6 @@ func proxyView(raw json.RawMessage) any {
 	return p
 }
 
-func (s *Server) listProxies(ctx context.Context, _ *struct{}) (*jsonOutput[Proxies], error) {
-	list, err := s.objects(ctx, kuma.Proxies)
-	if err != nil {
-		return nil, err
-	}
-	return replyAs[Proxies](s, ctx, map[string]any{"proxies": views(list, proxyView)})
-}
-
-func (s *Server) getProxy(ctx context.Context, in *proxyIDParam) (*jsonOutput[ProxyResponse], error) {
-	p, err := s.object(ctx, kuma.Proxies, in.ProxyID, "proxy does not exist")
-	if err != nil {
-		return nil, err
-	}
-	return replyAs[ProxyResponse](s, ctx, map[string]any{"proxy": proxyView(p)})
-}
-
 // checkProxy is 2.0's _check_arguments_proxy.
 func checkProxy(p map[string]any) *apiError {
 	required := []string{"protocol", "host", "port"}
@@ -399,22 +358,6 @@ func (s *Server) deleteProxy(ctx context.Context, in *proxyIDParam) (*jsonOutput
 // Docker hosts.
 
 func rawView(raw json.RawMessage) any { return raw }
-
-func (s *Server) listDockerHosts(ctx context.Context, _ *struct{}) (*jsonOutput[DockerHosts], error) {
-	list, err := s.objects(ctx, kuma.DockerHosts)
-	if err != nil {
-		return nil, err
-	}
-	return replyAs[DockerHosts](s, ctx, map[string]any{"docker_hosts": views(list, rawView)})
-}
-
-func (s *Server) getDockerHost(ctx context.Context, in *dockerHostIDParam) (*jsonOutput[DockerHostResponse], error) {
-	h, err := s.object(ctx, kuma.DockerHosts, in.DockerHostID, "docker host does not exist")
-	if err != nil {
-		return nil, err
-	}
-	return replyAs[DockerHostResponse](s, ctx, map[string]any{"docker_host": h})
-}
 
 // dockerHost completes a docker host as 2.0 did (_build_docker_host_data,
 // _convert_docker_host_input): name and dockerType are required, and the

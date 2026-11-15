@@ -615,6 +615,9 @@ func TestReadAfterLostConnectionIs503(t *testing.T) {
 		{"GET", "/maintenance"}, {"GET", "/statuspages"}, {"DELETE", "/statuspages/x"},
 		{"GET", "/info"}, {"GET", "/ping"}, {"GET", "/uptime"}, {"GET", "/cert_info"},
 	} {
+		// Cached reads do not call Sync while State is synced: the
+		// connection drops before them too.
+		e.client.State().Reset()
 		if status, v := e.call(t, c.method, c.path, ""); status != 503 || get[string](t, v, "detail") != "Uptime Kuma is unavailable" {
 			t.Errorf("%s %s: %d %v", c.method, c.path, status, v)
 		}

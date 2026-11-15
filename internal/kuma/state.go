@@ -211,9 +211,17 @@ func (st *State) snapshotLocked(l List) Snapshot {
 	return Snapshot{Version: st.versions[l], Synced: st.synced}
 }
 
-// Objects returns the objects of list l (Monitors to APIKeys) by
-// increasing id.
-func (st *State) Objects(l List) ([]json.RawMessage, Snapshot) {
+// Snapshot describes list l now without reading it: a reader that kept
+// what it built from an earlier read at the same Version may reuse it, and
+// must not when Synced is false. It does not allocate.
+func (st *State) Snapshot(l List) Snapshot {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	return st.snapshotLocked(l)
+}
+
+// ObjectsByID is Objects with the id of each object.
+func (st *State) ObjectsByID(l List) ([]int64, []json.RawMessage, Snapshot) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 	m := st.objects[l]
@@ -222,7 +230,14 @@ func (st *State) Objects(l List) ([]json.RawMessage, Snapshot) {
 	for i, id := range ids {
 		out[i] = m[id]
 	}
-	return out, st.snapshotLocked(l)
+	return ids, out, st.snapshotLocked(l)
+}
+
+// Objects returns the objects of list l (Monitors to APIKeys) by
+// increasing id.
+func (st *State) Objects(l List) ([]json.RawMessage, Snapshot) {
+	_, out, snap := st.ObjectsByID(l)
+	return out, snap
 }
 
 // Object returns the object of list l with id.

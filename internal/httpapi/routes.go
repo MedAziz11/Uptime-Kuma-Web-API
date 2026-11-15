@@ -189,10 +189,10 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	const get, post, patch, del = http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete
 
 	// Monitors.
-	huma.Register(s.api, reg(get, "/monitors", "get_monitors", "Get all monitors", "Monitor"), s.listMonitors)
+	cachedRoute[struct{}, jsonOutput[Monitors]](s, reg(get, "/monitors", "get_monitors", "Get all monitors", "Monitor"), s.serveList(s.cache.monitors))
 	huma.Register(s.api, reg(post, "/monitors", "create_monitor", "Create a monitor", "Monitor"), s.createMonitor)
 	s.documentRequiredBody("/monitors", post, "Monitor", reflect.TypeFor[MonitorUpdate](), "type", "name")
-	huma.Register(s.api, reg(get, "/monitors/{monitor_id}", "get_monitor", "Get a monitor", "Monitor"), s.getMonitor)
+	cachedRoute[monitorIDParam, jsonOutput[MonitorResponse]](s, reg(get, "/monitors/{monitor_id}", "get_monitor", "Get a monitor", "Monitor"), s.serveObject(s.cache.monitors, "monitor_id", "Not found"))
 	huma.Register(s.api, reg(patch, "/monitors/{monitor_id}", "update_monitor", "Update a monitor", "Monitor"), s.updateMonitor)
 	body(patch, "/monitors/{monitor_id}", "MonitorUpdate", reflect.TypeFor[MonitorUpdate]())
 	huma.Register(s.api, reg(del, "/monitors/{monitor_id}", "delete_monitor", "Delete a monitor", "Monitor"), s.deleteMonitor)
@@ -205,7 +205,7 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	body(del, "/monitors/{monitor_id}/tag", "MonitorTag", reflect.TypeFor[MonitorTag]())
 
 	// Status pages.
-	huma.Register(s.api, reg(get, "/statuspages", "get_all_status_pages", "Get all status pages", "Status Page"), s.listStatusPages)
+	cachedRoute[struct{}, jsonOutput[StatusPageList]](s, reg(get, "/statuspages", "get_all_status_pages", "Get all status pages", "Status Page"), s.serveList(s.cache.statusPages))
 	huma.Register(s.api, reg(post, "/statuspages", "add_status_page", "Add a status page", "Status Page"), s.createStatusPage)
 	body(post, "/statuspages", "AddStatusPageRequest", reflect.TypeFor[AddStatusPageRequest]())
 	huma.Register(s.api, reg(get, "/statuspages/{slug}", "get_status_page", "Get a status page", "Status Page"), s.getStatusPage)
@@ -217,7 +217,7 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	huma.Register(s.api, reg(del, "/statuspages/{slug}/incident/unpin", "unpin_incident", "Unpin the incident", "Status Page"), s.unpinIncident)
 
 	// Maintenances.
-	huma.Register(s.api, reg(get, "/maintenance", "get_maintenances", "Get all maintenances", "Maintenance"), s.listMaintenances)
+	cachedRoute[struct{}, jsonOutput[Maintenances]](s, reg(get, "/maintenance", "get_maintenances", "Get all maintenances", "Maintenance"), s.serveList(s.cache.maintenances))
 	huma.Register(s.api, reg(post, "/maintenance", "create_maintenance", "Create a maintenance", "Maintenance"), s.createMaintenance)
 	s.documentRequiredBody("/maintenance", post, "Maintenance", reflect.TypeFor[MaintenanceUpdate](), "title", "strategy")
 	huma.Register(s.api, reg(get, "/maintenance/{maintenance_id}", "get_maintenance", "Get a maintenance", "Maintenance"), s.getMaintenance)
@@ -240,32 +240,32 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	huma.Register(s.api, reg(del, "/tags/{tag_id}", "delete_tag", "Delete a tag", "Tags"), s.deleteTag)
 
 	// Notifications.
-	huma.Register(s.api, reg(get, "/notifications", "get_notifications", "Get all notifications", "Notifications"), s.listNotifications)
+	cachedRoute[struct{}, jsonOutput[Notifications]](s, reg(get, "/notifications", "get_notifications", "Get all notifications", "Notifications"), s.serveList(s.cache.notifications))
 	huma.Register(s.api, reg(post, "/notifications", "add_notification", "Add a notification", "Notifications"), s.createNotification)
 	body(post, "/notifications", "NotificationOptions", reflect.TypeFor[NotificationOptions]())
 	huma.Register(s.api, reg(post, "/notifications/test", "test_notification", "Test a notification", "Notifications"), s.testNotification)
 	body(post, "/notifications/test", "NotificationOptions", reflect.TypeFor[NotificationOptions]())
-	huma.Register(s.api, reg(get, "/notifications/{notification_id}", "get_notification", "Get a notification", "Notifications"), s.getNotification)
+	cachedRoute[notificationIDParam, jsonOutput[NotificationResponse]](s, reg(get, "/notifications/{notification_id}", "get_notification", "Get a notification", "Notifications"), s.serveObject(s.cache.notifications, "notification_id", "notification does not exist"))
 	huma.Register(s.api, reg(patch, "/notifications/{notification_id}", "update_notification", "Update a notification", "Notifications"), s.updateNotification)
 	body(patch, "/notifications/{notification_id}", "NotificationOptions", reflect.TypeFor[NotificationOptions]())
 	huma.Register(s.api, reg(del, "/notifications/{notification_id}", "delete_notification", "Delete a notification", "Notifications"), s.deleteNotification)
 
 	// Proxies.
-	huma.Register(s.api, reg(get, "/proxies", "get_proxies", "Get all proxies", "Proxies"), s.listProxies)
+	cachedRoute[struct{}, jsonOutput[Proxies]](s, reg(get, "/proxies", "get_proxies", "Get all proxies", "Proxies"), s.serveList(s.cache.proxies))
 	huma.Register(s.api, reg(post, "/proxies", "add_proxy", "Add a proxy", "Proxies"), s.createProxy)
 	body(post, "/proxies", "ProxyOptions", reflect.TypeFor[ProxyOptions]())
-	huma.Register(s.api, reg(get, "/proxies/{proxy_id}", "get_proxy", "Get a proxy", "Proxies"), s.getProxy)
+	cachedRoute[proxyIDParam, jsonOutput[ProxyResponse]](s, reg(get, "/proxies/{proxy_id}", "get_proxy", "Get a proxy", "Proxies"), s.serveObject(s.cache.proxies, "proxy_id", "proxy does not exist"))
 	huma.Register(s.api, reg(patch, "/proxies/{proxy_id}", "update_proxy", "Update a proxy", "Proxies"), s.updateProxy)
 	body(patch, "/proxies/{proxy_id}", "ProxyOptions", reflect.TypeFor[ProxyOptions]())
 	huma.Register(s.api, reg(del, "/proxies/{proxy_id}", "delete_proxy", "Delete a proxy", "Proxies"), s.deleteProxy)
 
 	// Docker hosts.
-	huma.Register(s.api, reg(get, "/docker_hosts", "get_docker_hosts", "Get all docker hosts", "Docker Hosts"), s.listDockerHosts)
+	cachedRoute[struct{}, jsonOutput[DockerHosts]](s, reg(get, "/docker_hosts", "get_docker_hosts", "Get all docker hosts", "Docker Hosts"), s.serveList(s.cache.dockerHosts))
 	huma.Register(s.api, reg(post, "/docker_hosts", "add_docker_host", "Add a docker host", "Docker Hosts"), s.createDockerHost)
 	body(post, "/docker_hosts", "DockerHostOptions", reflect.TypeFor[DockerHostOptions]())
 	huma.Register(s.api, reg(post, "/docker_hosts/test", "test_docker_host", "Test a docker host", "Docker Hosts"), s.testDockerHost)
 	body(post, "/docker_hosts/test", "DockerHostOptions", reflect.TypeFor[DockerHostOptions]())
-	huma.Register(s.api, reg(get, "/docker_hosts/{docker_host_id}", "get_docker_host", "Get a docker host", "Docker Hosts"), s.getDockerHost)
+	cachedRoute[dockerHostIDParam, jsonOutput[DockerHostResponse]](s, reg(get, "/docker_hosts/{docker_host_id}", "get_docker_host", "Get a docker host", "Docker Hosts"), s.serveObject(s.cache.dockerHosts, "docker_host_id", "docker host does not exist"))
 	huma.Register(s.api, reg(patch, "/docker_hosts/{docker_host_id}", "update_docker_host", "Update a docker host", "Docker Hosts"), s.updateDockerHost)
 	body(patch, "/docker_hosts/{docker_host_id}", "DockerHostOptions", reflect.TypeFor[DockerHostOptions]())
 	huma.Register(s.api, reg(del, "/docker_hosts/{docker_host_id}", "delete_docker_host", "Delete a docker host", "Docker Hosts"), s.deleteDockerHost)
@@ -282,10 +282,32 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	}}
 	huma.Register(s.api, reg(get, "/database/size", "get_db_size", "Get the Uptime Kuma database size", "DataBase"), s.databaseSize)
 	huma.Register(s.api, reg(post, "/database/shrink", "shrink_db", "Shrink the Uptime Kuma database", "DataBase"), s.shrinkDatabase)
-	huma.Register(s.api, reg(get, "/cert_info", "get_cert_info", "Get certificate info", "Certification Info"), s.certInfo)
-	huma.Register(s.api, reg(get, "/info", "get_info", "Get server info", "Informations"), s.info)
-	huma.Register(s.api, reg(get, "/ping", "get_avg_ping", "Get the average ping of each monitor", "Ping Average"), s.avgPing)
-	huma.Register(s.api, reg(get, "/uptime", "get_uptime", "Get the uptime of each monitor", "Uptime"), s.uptime)
+	cachedRoute[struct{}, jsonOutput[ByMonitor]](s, reg(get, "/cert_info", "get_cert_info", "Get certificate info", "Certification Info"), s.serveList(s.cache.certInfo))
+	cachedRoute[struct{}, jsonOutput[ServerInfo]](s, reg(get, "/info", "get_info", "Get server info", "Informations"), s.serveList(s.cache.info))
+	cachedRoute[struct{}, jsonOutput[ByMonitor]](s, reg(get, "/ping", "get_avg_ping", "Get the average ping of each monitor", "Ping Average"), s.serveList(s.cache.avgPing))
+	cachedRoute[struct{}, jsonOutput[ByMonitor]](s, reg(get, "/uptime", "get_uptime", "Get the uptime of each monitor", "Uptime"), s.serveList(s.cache.uptime))
+}
+
+// cachedRoute registers a read served from the response cache by a plain
+// handler h, and documents it as huma would with input I and output O.
+// huma's per-request work (an input and an output struct, its context,
+// content negotiation, re-validating the encoded body) costs about 0.8 µs
+// and 6 allocations per request (benchmarks in docs/performance.md), where
+// a cached read needs neither.
+func cachedRoute[I, O any](s *Server, op huma.Operation, h http.HandlerFunc) {
+	huma.Register(s.docs, op, func(context.Context, *I) (*O, error) {
+		return nil, errors.New("documentation only")
+	})
+	s.mux.Handle(op.Method+" "+op.Path, h)
+}
+
+// docsOnly is the huma adapter of Server.docs: it serves nothing.
+type docsOnly struct{}
+
+func (docsOnly) Handle(*huma.Operation, func(huma.Context)) {}
+
+func (docsOnly) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
 }
 
 // redocPage is FastAPI's ReDoc page (get_redoc_html), which 2.0 serves at

@@ -62,29 +62,9 @@ func intToBool(m map[string]any, keys ...string) {
 	}
 }
 
-func (s *Server) listMonitors(ctx context.Context, _ *struct{}) (*jsonOutput[Monitors], error) {
-	list, err := s.objects(ctx, kuma.Monitors)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]any, len(list))
-	for i, m := range list {
-		out[i] = monitorView(m)
-	}
-	return replyAs[Monitors](s, ctx, map[string]any{"monitors": out})
-}
-
 // monitor returns a monitor from the state, or 2.0's 404.
 func (s *Server) monitor(ctx context.Context, id int64, detail string) (json.RawMessage, error) {
 	return s.object(ctx, kuma.Monitors, id, detail)
-}
-
-func (s *Server) getMonitor(ctx context.Context, in *monitorIDParam) (*jsonOutput[MonitorResponse], error) {
-	m, err := s.monitor(ctx, in.MonitorID, "Not found")
-	if err != nil {
-		return nil, err
-	}
-	return replyAs[MonitorResponse](s, ctx, map[string]any{"monitor": monitorView(m)})
 }
 
 func (s *Server) createMonitor(ctx context.Context, in *bodyInput) (*jsonOutput[KumaMessage], error) {
