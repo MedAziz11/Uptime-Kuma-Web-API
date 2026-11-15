@@ -94,7 +94,7 @@ type TagUpdate struct {
 
 // NotificationOptions is the body of the notification routes: the options
 // of the notification type (Uptime Kuma's own names, e.g. webhookURL for
-// "webhook"). An option Uptime Kuma does not know is rejected with 422.
+// "webhook") pass through to Uptime Kuma.
 type NotificationOptions struct {
 	Name          *string  `json:"name,omitempty" doc:"Required to add."`
 	Type          *string  `json:"type,omitempty" doc:"Required to add, e.g. webhook, slack, telegram, smtp."`

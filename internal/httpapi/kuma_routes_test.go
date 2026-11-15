@@ -140,10 +140,10 @@ func TestKumaRoutesLifecycle(t *testing.T) {
 	e.ok(t, "DELETE", fmt.Sprintf("/tags/%d", tagID), "")
 
 	// Notifications, proxies, docker hosts.
-	n := e.ok(t, "POST", "/notifications", `{"name":"hook","type":"webhook","webhookURL":"http://h"}`)
+	n := e.ok(t, "POST", "/notifications", `{"name":"hook","type":"webhook","webhookURL":"http://h","notAnOption":1}`)
 	nid := int(get[float64](t, n, "id"))
 	got := e.ok(t, "GET", fmt.Sprintf("/notifications/%d", nid), "")["notification"].(map[string]any)
-	if got["webhookURL"] != "http://h" || got["isDefault"] != false || got["config"] != nil {
+	if got["webhookURL"] != "http://h" || got["isDefault"] != false || got["config"] != nil || got["notAnOption"] != 1.0 {
 		t.Fatalf("notification %v", got)
 	}
 	e.ok(t, "PATCH", fmt.Sprintf("/notifications/%d", nid), `{"name":"renamed"}`)
@@ -332,7 +332,7 @@ func TestKumaRoutesErrors(t *testing.T) {
 		{"PATCH", fmt.Sprintf("/monitors/%d", mon), `{"retryInterval":5}`, 422, "the value of retryInterval must not be less than 20"},
 		{"PATCH", fmt.Sprintf("/tags/%d", tag), `{"name":null}`, 422, "missing 1 required argument: 'name'"},
 		{"POST", "/notifications", `{"name":"x"}`, 422, "missing 1 required argument: 'type'"},
-		{"POST", "/notifications", `{"name":"x","type":"webhook","notAnOption":1}`, 422, "unknown argument 'notAnOption'"},
+		{"POST", "/notifications", `{"name":"x","type":"webhook","isDefault":"yes"}`, 422, "bool_parsing body.isDefault"},
 		{"POST", "/notifications/test", `{"type":"webhook"}`, 422, "missing 1 required argument: 'name'"},
 		{"POST", "/proxies", `{"host":"x"}`, 422, "missing 2 required argument: 'protocol', 'port'"},
 		{"POST", "/proxies", `{"protocol":"http","host":"x","port":1,"auth":true}`, 422, "missing 2 required argument: 'username', 'password'"},

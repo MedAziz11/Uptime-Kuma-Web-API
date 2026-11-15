@@ -62,9 +62,6 @@ type Server struct {
 	log       *slog.Logger
 	version   string
 
-	// notificationOptions are the option names a notification may have.
-	notificationOptions map[string]bool
-
 	mux     *http.ServeMux
 	api     huma.API
 	handler http.Handler
@@ -89,8 +86,6 @@ func New(opts Options) (*Server, error) {
 		log:       opts.Logger,
 		version:   opts.Version,
 		mux:       http.NewServeMux(),
-
-		notificationOptions: notificationOptions(),
 	}
 	s.api = humago.New(s.mux, s.humaConfig())
 	s.routes(opts.MaxBodyBytes)

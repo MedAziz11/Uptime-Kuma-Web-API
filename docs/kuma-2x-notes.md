@@ -106,7 +106,7 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 | Lax coercion in bodies (`"5"` for an integer, `0`/`1` for a boolean) | accepted by pydantic | 422 (`int_parsing`, `bool_type`, ...) | Fields are checked for their JSON type only |
 | `timeout` of a monitor | integer | number | Kuma 2.x accepts decimals |
 | Fields a body does not document | monitors: passed on; maintenances, status pages: dropped; proxies, docker hosts: 422 | passed on to Kuma (architecture §6) | |
-| Notification options | checked against uptime-kuma-api 1.2.1's list | checked against the options of Kuma 2.5.11's providers and UI (unknown → 422, kept for the acceptance suite) | |
+| Notification options the API does not document | 422 `unknown argument` (uptime-kuma-api 1.2.1's list of provider options) | passed on to Kuma, which stores them | A static list lags behind Kuma's providers (§6); the acceptance suite asserts the pass-through |
 | Documented fields of notifications, proxies, docker hosts | not type-checked | type-checked (422) | §6 |
 | `PATCH /notifications/{id}` changing `type` | dropped the old provider's options | keeps them | No per-provider option list for 2.x |
 | `POST /monitors` defaults | uptime-kuma-api's (`maxretries` 1, ...) | Kuma 2.x UI's (`defaults.go`: `maxretries` 0, `timeout` 48, per-type ports, ...) | 2.0 could not create monitors on 2.x at all |

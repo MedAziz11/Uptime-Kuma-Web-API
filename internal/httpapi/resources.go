@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"net/http"
-	"slices"
 
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/kuma"
 )
@@ -255,8 +253,9 @@ func (s *Server) getNotification(ctx context.Context, in *notificationIDParam) (
 }
 
 // newNotification checks a notification to add or test, as 2.0 did
-// (_build_notification_data): name and type are required, unknown options
-// are refused; isDefault and applyExisting default to false.
+// (_build_notification_data): name and type are required; isDefault and
+// applyExisting default to false. The options of the notification type
+// pass through: Uptime Kuma knows its providers, a list here would lag.
 func (s *Server) newNotification(in *bodyInput) (map[string]any, *apiError) {
 	n, aerr := decodeDict(notificationModel, in)
 	if aerr != nil {
@@ -264,11 +263,6 @@ func (s *Server) newNotification(in *bodyInput) (map[string]any, *apiError) {
 	}
 	if aerr := missingArguments(n, "name", "type"); aerr != nil {
 		return nil, aerr
-	}
-	for _, k := range slices.Sorted(maps.Keys(n)) {
-		if !s.notificationOptions[k] {
-			return nil, newError(http.StatusUnprocessableEntity, "unknown argument '"+k+"'")
-		}
 	}
 	for _, k := range []string{"isDefault", "applyExisting"} {
 		if _, ok := n[k]; !ok {

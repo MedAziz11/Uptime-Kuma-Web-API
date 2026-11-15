@@ -54,7 +54,12 @@ def test_notifications(api: Api):
         assert "renamed hook" in names
     finally:
         api.delete(f"/notifications/{notification_id}")
-    api.post("/notifications", json={**options, "notAnOption": 1}, expect=422)
+    # Options the API does not document pass through to Uptime Kuma, which stores them.
+    extra_id = api.post("/notifications", json={**options, "notAnOption": 1})["id"]
+    try:
+        assert api.get(f"/notifications/{extra_id}")["notification"]["notAnOption"] == 1
+    finally:
+        api.delete(f"/notifications/{extra_id}")
     api.get(f"/notifications/{UNKNOWN}", expect=404)
     api.delete(f"/notifications/{UNKNOWN}", expect=404)
 
