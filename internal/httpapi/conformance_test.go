@@ -190,14 +190,26 @@ func TestConformanceWith2_0(t *testing.T) {
 	}
 	used := map[string]bool{}
 	for name, sc := range doc.Scenarios {
+		for _, step := range sc.Steps {
+			if _, ok := differences[name+"/"+step.Name]; ok {
+				used[name+"/"+step.Name] = true
+			}
+		}
+	}
+	for key := range differences {
+		if !used[key] {
+			t.Errorf("difference %q matches no recorded step", key)
+		}
+	}
+	for name, sc := range doc.Scenarios {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			h := conformanceServer(t, doc, sc.CORSOrigins, sc.Database)
 			saved := map[string]string{}
 			for _, step := range sc.Steps {
 				key := name + "/" + step.Name
 				want := step
 				if d, ok := differences[key]; ok {
-					used[key] = true
 					want = applyDifference(step, d)
 				}
 				got, gotHeaders, gotBody := replay(t, h, doc.Tokens, saved, step)
@@ -220,11 +232,6 @@ func TestConformanceWith2_0(t *testing.T) {
 				}
 			}
 		})
-	}
-	for key := range differences {
-		if !used[key] {
-			t.Errorf("difference %q matches no recorded step", key)
-		}
 	}
 }
 
