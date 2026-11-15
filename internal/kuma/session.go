@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/kuma/sio"
@@ -107,6 +108,11 @@ type Session struct {
 	changed chan struct{} // closed and replaced whenever the state above changes
 
 	token string // the session token; used by the supervisor goroutine only
+
+	// writes counts the calls made with Call (writes) that returned,
+	// successful or not: reads collapsed by Client use it so that a read
+	// never shares a call sent before a write that had returned.
+	writes atomic.Uint64
 }
 
 // New returns a Session. It does not connect: the first Call does.
@@ -275,6 +281,7 @@ func (s *Session) dispatch(name string, args []json.RawMessage) {
 // answered {ok: false}; ctx.Err() when
 // ctx was canceled; any other error means the arguments could not be sent.
 func (s *Session) Call(ctx context.Context, event string, args ...any) (json.RawMessage, error) {
+	defer s.writes.Add(1)
 	res, _, err := s.call(ctx, event, args)
 	return res, err
 }

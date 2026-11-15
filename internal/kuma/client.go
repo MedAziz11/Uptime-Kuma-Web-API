@@ -36,6 +36,8 @@ type Client struct {
 	refreshing  atomic.Int32  // getMonitorList calls in flight
 	verify      chan struct{} // a verification is due; capacity 1
 	verifyDelay time.Duration // debounce before verifying
+
+	reads flightGroup // identical concurrent reads share one call
 }
 
 // Bounds of the monitor list verification.
@@ -94,6 +96,24 @@ func (c *Client) verifier() {
 	}
 }
 
+// read returns the result of a read of Uptime Kuma, sharing a call in
+// flight for the same key (see flightGroup). key must identify the command
+// and all its arguments.
+func (c *Client) read(ctx context.Context, key string, fn func(context.Context) (json.RawMessage, error)) (json.RawMessage, error) {
+	return c.reads.do(ctx, key, c.s.writes.Load(), fn)
+}
+
+// readCommand is read for a command sent with CallIdempotent.
+func (c *Client) readCommand(ctx context.Context, event string, args ...any) (json.RawMessage, error) {
+	key := event
+	for _, a := range args {
+		key += "\x00" + fmt.Sprint(a)
+	}
+	return c.read(ctx, key, func(ctx context.Context) (json.RawMessage, error) {
+		return c.s.CallIdempotent(ctx, event, args...)
+	})
+}
+
 // State returns the state built from Uptime Kuma's pushes. Its contents are
 // only meaningful after Sync returned nil.
 func (c *Client) State() *State { return c.st }
@@ -135,7 +155,7 @@ func (c *Client) AddMonitor(ctx context.Context, monitor map[string]any) (json.R
 
 // GetMonitor sends "getMonitor": the full monitor, read from the database.
 func (c *Client) GetMonitor(ctx context.Context, id int64) (json.RawMessage, error) {
-	return c.s.CallIdempotent(ctx, "getMonitor", id)
+	return c.readCommand(ctx, "getMonitor", id)
 }
 
 // EditMonitor sends "editMonitor" with the full monitor (see MergeMonitor).
@@ -160,7 +180,7 @@ func (c *Client) ResumeMonitor(ctx context.Context, id int64) (json.RawMessage, 
 
 // MonitorBeats sends "getMonitorBeats": the heartbeats of the last hours.
 func (c *Client) MonitorBeats(ctx context.Context, id int64, hours float64) (json.RawMessage, error) {
-	return c.s.CallIdempotent(ctx, "getMonitorBeats", id, hours)
+	return c.readCommand(ctx, "getMonitorBeats", id, hours)
 }
 
 // AddMonitorTag sends "addMonitorTag".
@@ -179,7 +199,7 @@ func (c *Client) DeleteMonitorTag(ctx context.Context, tagID, monitorID int64, v
 
 // Tags sends "getTags".
 func (c *Client) Tags(ctx context.Context) (json.RawMessage, error) {
-	return c.s.CallIdempotent(ctx, "getTags")
+	return c.readCommand(ctx, "getTags")
 }
 
 // AddTag sends "addTag".
@@ -282,7 +302,7 @@ func (c *Client) AddMaintenance(ctx context.Context, m map[string]any) (json.Raw
 
 // GetMaintenance sends "getMaintenance".
 func (c *Client) GetMaintenance(ctx context.Context, id int64) (json.RawMessage, error) {
-	return c.s.CallIdempotent(ctx, "getMaintenance", id)
+	return c.readCommand(ctx, "getMaintenance", id)
 }
 
 // EditMaintenance sends "editMaintenance" with the full maintenance.
@@ -307,7 +327,7 @@ func (c *Client) ResumeMaintenance(ctx context.Context, id int64) (json.RawMessa
 
 // MaintenanceMonitors sends "getMonitorMaintenance".
 func (c *Client) MaintenanceMonitors(ctx context.Context, id int64) (json.RawMessage, error) {
-	return c.s.CallIdempotent(ctx, "getMonitorMaintenance", id)
+	return c.readCommand(ctx, "getMonitorMaintenance", id)
 }
 
 // SetMaintenanceMonitors sends "addMonitorMaintenance", which replaces the
@@ -321,14 +341,17 @@ func (c *Client) SetMaintenanceMonitors(ctx context.Context, id int64, monitors 
 
 // GetStatusPage sends "getStatusPage": the page's configuration.
 func (c *Client) GetStatusPage(ctx context.Context, slug string) (json.RawMessage, error) {
-	return c.s.CallIdempotent(ctx, "getStatusPage", slug)
+	return c.readCommand(ctx, "getStatusPage", slug)
 }
 
 // PublicStatusPage reads /api/status-page/{slug}: the page as visitors see
 // it (configuration, pinned incidents, groups of monitors, maintenances).
 // An unknown slug is ErrNotFound.
 func (c *Client) PublicStatusPage(ctx context.Context, slug string) (json.RawMessage, error) {
-	b, err := c.s.get(ctx, "/api/status-page/"+url.PathEscape(slug))
+	path := "/api/status-page/" + url.PathEscape(slug)
+	b, err := c.read(ctx, "GET "+path, func(ctx context.Context) (json.RawMessage, error) {
+		return c.s.get(ctx, path)
+	})
 	if errors.Is(err, errHTTPNotFound) {
 		return nil, fmt.Errorf("status page %q: %w", slug, ErrNotFound)
 	}
@@ -409,7 +432,7 @@ func (c *Client) UnpinIncident(ctx context.Context, slug string) (json.RawMessag
 
 // DatabaseSize sends "getDatabaseSize".
 func (c *Client) DatabaseSize(ctx context.Context) (json.RawMessage, error) {
-	return c.s.CallIdempotent(ctx, "getDatabaseSize")
+	return c.readCommand(ctx, "getDatabaseSize")
 }
 
 // ShrinkDatabase sends "shrinkDatabase".
