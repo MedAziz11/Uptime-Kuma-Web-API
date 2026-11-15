@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -430,5 +431,67 @@ func TestMalformedTokens(t *testing.T) {
 	}
 	if sub, err := tk.Subject(sign(`{"alg":"HS256","b64":true}`, `{"sub":"a","exp":1e300}`)); err != nil || sub != "a" {
 		t.Fatalf("b64 true / far exp: %q %v", sub, err)
+	}
+}
+
+// Verified tokens are cached; the cache keeps every guarantee of a full
+// verification.
+func TestVerifiedTokenCache(t *testing.T) {
+	now := time.Unix(1794580000, 250_000_000)
+	tk := newTokens(t, "cache-signing-key", time.Minute, now)
+	tok := tk.Issue("alice")
+	for range 2 {
+		if sub, err := tk.Subject(tok); err != nil || sub != "alice" {
+			t.Fatalf("%q %v", sub, err)
+		}
+	}
+	if len(tk.verified) != 1 {
+		t.Fatalf("%d cached", len(tk.verified))
+	}
+	// Expiry is checked on every hit, to the same precision: valid just
+	// before exp, rejected at exp.
+	exp := time.Unix(now.Add(time.Minute).Unix(), 0)
+	tk.now = func() time.Time { return exp.Add(-time.Nanosecond * 1000) }
+	if _, err := tk.Subject(tok); err != nil {
+		t.Fatalf("before exp: %v", err)
+	}
+	tk.now = func() time.Time { return exp }
+	if _, err := tk.Subject(tok); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("at exp: %v", err)
+	}
+	if len(tk.verified) != 0 {
+		t.Fatal("expired token kept")
+	}
+	// Another key never accepts it, cached here or not.
+	tk.now = func() time.Time { return now }
+	tk.Subject(tok)
+	other := newTokens(t, "another-signing-key", time.Minute, now)
+	if _, err := other.Subject(tok); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("other key: %v", err)
+	}
+	// Invalid tokens are not cached; the cache is bounded.
+	tk.Subject(tok + "x")
+	tk.Subject("garbage")
+	if len(tk.verified) != 1 {
+		t.Fatalf("%d cached", len(tk.verified))
+	}
+	for i := range maxVerified + 10 {
+		if _, err := tk.Subject(tk.Issue(fmt.Sprint("u", i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(tk.verified) != maxVerified {
+		t.Fatalf("%d cached", len(tk.verified))
+	}
+}
+
+func BenchmarkSubject(b *testing.B) {
+	tk, _ := NewTokens("bench-signing-key", time.Hour)
+	tok := tk.Issue("admin")
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := tk.Subject(tok); err != nil {
+			b.Fatal(err)
+		}
 	}
 }

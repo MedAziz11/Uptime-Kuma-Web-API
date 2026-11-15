@@ -11,6 +11,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,7 +28,26 @@ type Tokens struct {
 	key []byte
 	ttl time.Duration
 	now func() time.Time
+
+	// verified caches the tokens that passed verify: verifying (two base64
+	// decodings, two JSON objects, an HMAC) took about 40% of a cached read.
+	// A token never changes once signed and the key is fixed for the life
+	// of Tokens, so only its expiry needs checking again, to the same
+	// precision as validate. Invalid tokens are not cached, so the cache
+	// only holds what the key signed. Users are looked up by the caller on
+	// every request, so a deleted user's token is still refused at once.
+	mu       sync.RWMutex
+	verified map[string]verifiedToken
 }
+
+type verifiedToken struct {
+	subject string
+	exp     float64 // as validate reads it
+}
+
+// maxVerified bounds the token cache. When it is full, one entry is
+// dropped (the first of Go's randomized map iteration).
+const maxVerified = 1024
 
 // NewTokens returns Tokens signing with key; issued tokens expire after ttl.
 func NewTokens(key string, ttl time.Duration) (*Tokens, error) {
@@ -37,7 +57,7 @@ func NewTokens(key string, ttl time.Duration) (*Tokens, error) {
 	if ttl <= 0 {
 		return nil, fmt.Errorf("auth: token lifetime %v must be positive", ttl)
 	}
-	return &Tokens{key: []byte(key), ttl: ttl, now: time.Now}, nil
+	return &Tokens{key: []byte(key), ttl: ttl, now: time.Now, verified: map[string]verifiedToken{}}, nil
 }
 
 // header is PyJWT's header for HS256, in its key order and spacing.
@@ -75,117 +95,141 @@ func (t *Tokens) mac(signingInput string) []byte {
 // Subject verifies token and returns its subject. Every failure wraps
 // ErrInvalidToken; the wrapped reason is for logs, not for clients.
 func (t *Tokens) Subject(token string) (string, error) {
-	sub, err := t.verify(token)
+	now := t.nowSeconds()
+	t.mu.RLock()
+	v, ok := t.verified[token]
+	t.mu.RUnlock()
+	if ok {
+		if v.exp <= now {
+			t.mu.Lock()
+			delete(t.verified, token)
+			t.mu.Unlock()
+			return "", fmt.Errorf("%w: token has expired", ErrInvalidToken)
+		}
+		return v.subject, nil
+	}
+	v, err := t.verify(token, now)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrInvalidToken, err)
 	}
-	return sub, nil
+	t.mu.Lock()
+	if len(t.verified) >= maxVerified {
+		for k := range t.verified {
+			delete(t.verified, k)
+			break
+		}
+	}
+	t.verified[token] = v
+	t.mu.Unlock()
+	return v.subject, nil
 }
 
-func (t *Tokens) verify(token string) (string, error) {
+// nowSeconds is the current time as validate compares it.
+func (t *Tokens) nowSeconds() float64 { return float64(t.now().UnixNano()) / 1e9 }
+
+func (t *Tokens) verify(token string, now float64) (verifiedToken, error) {
 	// Like PyJWT: the signature is after the last dot, the header before
 	// the first; a dot inside the payload segment fails to decode below.
 	signingInput, sigPart, ok := cutLast(token, ".")
 	if !ok {
-		return "", errors.New("not enough segments")
+		return verifiedToken{}, errors.New("not enough segments")
 	}
 	headerPart, payloadPart, ok := strings.Cut(signingInput, ".")
 	if !ok {
-		return "", errors.New("not enough segments")
+		return verifiedToken{}, errors.New("not enough segments")
 	}
 
 	headerJSON, err := decodeSegment(headerPart)
 	if err != nil {
-		return "", fmt.Errorf("header: %w", err)
+		return verifiedToken{}, fmt.Errorf("header: %w", err)
 	}
 	var hdr map[string]json.RawMessage
 	if err := json.Unmarshal(headerJSON, &hdr); err != nil || hdr == nil {
-		return "", errors.New("header is not a JSON object")
+		return verifiedToken{}, errors.New("header is not a JSON object")
 	}
 	var alg string
 	if err := json.Unmarshal(hdr["alg"], &alg); err != nil || alg != "HS256" {
-		return "", fmt.Errorf("algorithm %s is not allowed", hdr["alg"])
+		return verifiedToken{}, fmt.Errorf("algorithm %s is not allowed", hdr["alg"])
 	}
 	// Extensions that change how the token is read (RFC 7515 "crit",
 	// RFC 7797 "b64") are not supported.
 	if _, ok := hdr["crit"]; ok {
-		return "", errors.New("critical header parameters are not supported")
+		return verifiedToken{}, errors.New("critical header parameters are not supported")
 	}
 	if b64, ok := hdr["b64"]; ok && !bytes.Equal(b64, []byte("true")) {
-		return "", errors.New("unencoded payloads are not supported")
+		return verifiedToken{}, errors.New("unencoded payloads are not supported")
 	}
 	if kid, ok := hdr["kid"]; ok && !isJSONString(kid) {
-		return "", errors.New("key id must be a string")
+		return verifiedToken{}, errors.New("key id must be a string")
 	}
 
 	sig, err := decodeSegment(sigPart)
 	if err != nil {
-		return "", fmt.Errorf("signature: %w", err)
+		return verifiedToken{}, fmt.Errorf("signature: %w", err)
 	}
 	if !hmac.Equal(sig, t.mac(signingInput)) {
-		return "", errors.New("signature verification failed")
+		return verifiedToken{}, errors.New("signature verification failed")
 	}
 
 	payloadJSON, err := decodeSegment(payloadPart)
 	if err != nil {
-		return "", fmt.Errorf("payload: %w", err)
+		return verifiedToken{}, fmt.Errorf("payload: %w", err)
 	}
 	var claims map[string]json.RawMessage
 	if err := json.Unmarshal(payloadJSON, &claims); err != nil || claims == nil {
-		return "", errors.New("payload is not a JSON object")
+		return verifiedToken{}, errors.New("payload is not a JSON object")
 	}
-	return t.validate(claims)
+	return t.validate(claims, now)
 }
 
 // validate applies PyJWT's claim checks with 2.0's options (leeway 0,
 // exp and sub required, no audience or issuer expected) and 2.0's own
 // subject check (a non-empty string).
-func (t *Tokens) validate(claims map[string]json.RawMessage) (string, error) {
+func (t *Tokens) validate(claims map[string]json.RawMessage, now float64) (verifiedToken, error) {
 	for _, name := range []string{"exp", "sub"} {
 		if v, ok := claims[name]; !ok || bytes.Equal(v, []byte("null")) {
-			return "", fmt.Errorf("missing %s claim", name)
+			return verifiedToken{}, fmt.Errorf("missing %s claim", name)
 		}
 	}
-	now := float64(t.now().UnixNano()) / 1e9
 	if raw, ok := claims["iat"]; ok {
 		iat, err := numericDate(raw)
 		if err != nil {
-			return "", fmt.Errorf("iat: %w", err)
+			return verifiedToken{}, fmt.Errorf("iat: %w", err)
 		}
 		if iat > now {
-			return "", errors.New("token is not yet valid (iat)")
+			return verifiedToken{}, errors.New("token is not yet valid (iat)")
 		}
 	}
 	if raw, ok := claims["nbf"]; ok {
 		nbf, err := numericDate(raw)
 		if err != nil {
-			return "", fmt.Errorf("nbf: %w", err)
+			return verifiedToken{}, fmt.Errorf("nbf: %w", err)
 		}
 		if nbf > now {
-			return "", errors.New("token is not yet valid (nbf)")
+			return verifiedToken{}, errors.New("token is not yet valid (nbf)")
 		}
 	}
 	exp, err := numericDate(claims["exp"])
 	if err != nil {
-		return "", fmt.Errorf("exp: %w", err)
+		return verifiedToken{}, fmt.Errorf("exp: %w", err)
 	}
 	if exp <= now {
-		return "", errors.New("token has expired")
+		return verifiedToken{}, errors.New("token has expired")
 	}
 	if aud, ok := claims["aud"]; ok && isTruthy(aud) {
-		return "", errors.New("unexpected audience")
+		return verifiedToken{}, errors.New("unexpected audience")
 	}
 	if jti, ok := claims["jti"]; ok && !isJSONString(jti) {
-		return "", errors.New("jti must be a string")
+		return verifiedToken{}, errors.New("jti must be a string")
 	}
 	var sub string
 	if err := json.Unmarshal(claims["sub"], &sub); err != nil {
-		return "", errors.New("subject must be a string")
+		return verifiedToken{}, errors.New("subject must be a string")
 	}
 	if sub == "" {
-		return "", errors.New("empty subject")
+		return verifiedToken{}, errors.New("empty subject")
 	}
-	return sub, nil
+	return verifiedToken{subject: sub, exp: exp}, nil
 }
 
 // numericDate reads a NumericDate claim as PyJWT does (int(value)): a
