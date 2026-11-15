@@ -39,14 +39,22 @@ const (
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	code := run(ctx, os.Args[1:], os.LookupEnv, os.Stdout, os.Stderr, nil)
+	code := run(ctx, os.Args[1:], os.LookupEnv, os.Stdout, os.Stderr, hooks{})
 	stop()
 	os.Exit(code)
 }
 
-// run is main without the process: it serves until ctx is done. ready, if
-// not nil, is called with the listening address.
-func run(ctx context.Context, args []string, lookup config.LookupFunc, stdout, stderr io.Writer, ready func(net.Addr)) int {
+// hooks are what tests change in run. The zero value is production.
+type hooks struct {
+	// ready, if not nil, is called with the listening address.
+	ready func(net.Addr)
+	// bcryptCost replaces auth.DefaultCost when not zero: cost 12 makes
+	// every login take seconds under the race detector.
+	bcryptCost int
+}
+
+// run is main without the process: it serves until ctx is done.
+func run(ctx context.Context, args []string, lookup config.LookupFunc, stdout, stderr io.Writer, h hooks) int {
 	flags := flag.NewFlagSet("uptime-kuma-api", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	showVersion := flags.Bool("version", false, "print the version and exit")
@@ -64,14 +72,14 @@ func run(ctx context.Context, args []string, lookup config.LookupFunc, stdout, s
 		return exitConfig
 	}
 	log := slog.New(slog.NewJSONHandler(stderr, &slog.HandlerOptions{Level: cfg.LogLevel}))
-	if err := serve(ctx, cfg, log, ready); err != nil {
+	if err := serve(ctx, cfg, log, h); err != nil {
 		log.Error("uptime-kuma-api failed: "+err.Error(), "version", version.Version)
 		return exitFailed
 	}
 	return exitOK
 }
 
-func serve(ctx context.Context, cfg *config.Config, log *slog.Logger, ready func(net.Addr)) error {
+func serve(ctx context.Context, cfg *config.Config, log *slog.Logger, h hooks) error {
 	st, err := store.Open(ctx, cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("open the user database (DB_PATH): %w", err)
@@ -90,7 +98,11 @@ func serve(ctx context.Context, cfg *config.Config, log *slog.Logger, ready func
 	if err != nil {
 		return err
 	}
-	passwords, err := auth.NewPasswords(auth.DefaultCost)
+	cost := auth.DefaultCost
+	if h.bcryptCost != 0 {
+		cost = h.bcryptCost
+	}
+	passwords, err := auth.NewPasswords(cost)
 	if err != nil {
 		return err
 	}
@@ -141,8 +153,8 @@ func serve(ctx context.Context, cfg *config.Config, log *slog.Logger, ready func
 		return fmt.Errorf("listen on %s (LISTEN_ADDR): %w", cfg.ListenAddr, err)
 	}
 	log.Info("uptime-kuma-api started", "version", version.Version, "addr", ln.Addr().String())
-	if ready != nil {
-		ready(ln.Addr())
+	if h.ready != nil {
+		h.ready(ln.Addr())
 	}
 	srv := httpapi.NewHTTPServer(api, cfg.KumaTimeout, log)
 	if err := httpapi.Serve(ctx, srv, ln, httpapi.ShutdownTimeout); err != nil {

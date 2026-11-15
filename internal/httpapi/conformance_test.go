@@ -54,8 +54,8 @@ var recordedHeaders = []string{
 }
 
 // difference is how 3.0 deliberately answers differently from 2.0. Every
-// entry is listed in the phase report with its reason. Zero fields mean
-// "as 2.0".
+// entry is listed in docs/kuma-2x-notes.md ("Differences from 2.0") with its
+// reason. Zero fields mean "as 2.0".
 type difference struct {
 	status  int
 	headers map[string]string // replaced; "" removes
@@ -204,6 +204,9 @@ func TestConformanceWith2_0(t *testing.T) {
 						t.Errorf("%s: header %s %q, 2.0 %q", step.Name, hn, gotHeaders[hn], want.ResponseHeaders[hn])
 					}
 				}
+				if want.Status == http.StatusUnprocessableEntity {
+					gotBody, want.ResponseBody = fieldErrors(gotBody), fieldErrors(want.ResponseBody)
+				}
 				if !step.HTML && step.Method != http.MethodHead && !reflect.DeepEqual(gotBody, want.ResponseBody) {
 					g, _ := json.Marshal(gotBody)
 					w, _ := json.Marshal(want.ResponseBody)
@@ -217,6 +220,30 @@ func TestConformanceWith2_0(t *testing.T) {
 			t.Errorf("difference %q matches no recorded step", key)
 		}
 	}
+}
+
+// fieldErrors keeps what 3.0 promises of a 422 answer: the type and loc of
+// each error, without the position of a JSON syntax error. Messages and
+// echoed input need not match 2.0's.
+func fieldErrors(body any) any {
+	m, ok := body.(map[string]any)
+	if !ok {
+		return body
+	}
+	list, ok := m["detail"].([]any)
+	if !ok {
+		return body
+	}
+	out := make([]any, len(list))
+	for i, e := range list {
+		em, _ := e.(map[string]any)
+		loc := em["loc"]
+		if em["type"] == "json_invalid" {
+			loc = []any{"body"}
+		}
+		out[i] = map[string]any{"type": em["type"], "loc": loc}
+	}
+	return map[string]any{"detail": out}
 }
 
 func applyDifference(step v2Step, d difference) v2Step {

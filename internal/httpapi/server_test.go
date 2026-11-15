@@ -213,6 +213,11 @@ func TestOpenAPIDocument(t *testing.T) {
 	if res := env.do(t, "GET", "/docs", "", "", ""); res.StatusCode != 200 || !strings.Contains(res.Header.Get("Content-Security-Policy"), "default-src 'none'") {
 		t.Fatalf("docs %d %v", res.StatusCode, res.Header)
 	}
+	if res := env.do(t, "GET", "/redoc", "", "", ""); res.StatusCode != 200 || res.Header.Get("Content-Type") != "text/html; charset=utf-8" {
+		t.Fatalf("redoc %d %v", res.StatusCode, res.Header)
+	} else if b, _ := io.ReadAll(res.Body); !strings.Contains(string(b), `<redoc spec-url="/openapi.json">`) {
+		t.Fatalf("redoc page %s", b)
+	}
 	if res := env.do(t, "GET", "/schemas/Token.json", "", "", ""); res.StatusCode != 401 {
 		t.Fatalf("/schemas is not served: %d", res.StatusCode)
 	}

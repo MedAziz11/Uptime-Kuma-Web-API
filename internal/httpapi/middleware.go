@@ -233,7 +233,7 @@ func withBodyLimit(limit int64, next http.Handler) http.Handler {
 // unsupported method gets 405 there, as in 2.0). Everything else requires
 // a valid token, including paths no route serves.
 var publicPaths = []string{
-	"/", "/health", "/login/access-token", "/docs",
+	"/", "/health", "/login/access-token", "/docs", "/redoc",
 	"/openapi.json", "/openapi.yaml", "/openapi-3.0.json", "/openapi-3.0.yaml",
 }
 

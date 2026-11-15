@@ -6,82 +6,6 @@ import (
 	"time"
 )
 
-// Messages and positions from CPython 3.13's json module (2.0's runtime).
-func TestPyJSONErrorsMatchPython(t *testing.T) {
-	for in, want := range map[string]*pyJSONError{
-		`{"a":1,}`:                   {"Illegal trailing comma before end of object", 6},
-		`[1,]`:                       {"Illegal trailing comma before end of array", 2},
-		`{"a" 1}`:                    {"Expecting ':' delimiter", 5},
-		`{"a":}`:                     {"Expecting value", 5},
-		`[1 2]`:                      {"Expecting ',' delimiter", 3},
-		`"abc`:                       {"Unterminated string starting at", 0},
-		"\"a\x01\"":                  {"Invalid control character at", 2},
-		`"\x"`:                       {"Invalid \\escape", 1},
-		`"\u12"`:                     {"Invalid \\uXXXX escape", 2},
-		`"\u12zz"`:                   {"Invalid \\uXXXX escape", 2},
-		`1 2`:                        {"Extra data", 2},
-		``:                           {"Expecting value", 0},
-		`  `:                         {"Expecting value", 2},
-		`tru`:                        {"Expecting value", 0},
-		`01`:                         {"Extra data", 1},
-		`{"a":1`:                     {"Expecting ',' delimiter", 6},
-		`[`:                          {"Expecting value", 1},
-		`{`:                          {"Expecting property name enclosed in double quotes", 1},
-		`-`:                          {"Expecting value", 0},
-		`1.`:                         {"Extra data", 1},
-		`1e`:                         {"Extra data", 1},
-		`{1:2}`:                      {"Expecting property name enclosed in double quotes", 1},
-		`{"a":1}}`:                   {"Extra data", 7},
-		`[]]`:                        {"Extra data", 2},
-		` {"a" : [1, {"b": tru}]}`:   {"Expecting value", 18},
-		`{"é":x}`:                    {"Expecting value", 5},
-		`{,}`:                        {"Expecting property name enclosed in double quotes", 1},
-		`[,]`:                        {"Expecting value", 1},
-		`{"a":1 "b":2}`:              {"Expecting ',' delimiter", 7},
-		`"abc\"`:                     {"Unterminated string starting at", 0},
-		`-x`:                         {"Expecting value", 0},
-		`1.5e`:                       {"Extra data", 3},
-		"\"\t\"":                     {"Invalid control character at", 1},
-		`{"a":1,"b"}`:                {"Expecting ':' delimiter", 10},
-		`{"a":1, }`:                  {"Illegal trailing comma before end of object", 6},
-		`{"a":1, "b":2,}`:            {"Illegal trailing comma before end of object", 13},
-		`"\`:                         {"Unterminated string starting at", 0},
-		`{"a":1,"b":[1,{"c":"d"},]}`: {"Illegal trailing comma before end of array", 23},
-	} {
-		_, err := parsePyJSON(in)
-		if err == nil || *err != *want {
-			t.Errorf("%q: %+v, Python %+v", in, err, want)
-		}
-	}
-}
-
-func TestPyJSONValues(t *testing.T) {
-	for in, want := range map[string]string{
-		`{"b":1,"a":[true,false,null,"x"],"b":2}`: `{"b":2,"a":[true,false,null,"x"]}`,
-		`NaN`:                                `null`,
-		`[-Infinity, Infinity, 1.50e+3, -0]`: `[null,null,1.50e+3,-0]`,
-		`"é😀\ud800 \/\b\f\n\r\t"`:            `"é😀� /\b\f\n\r\t"`,
-		` {} `:                               `{}`,
-		`[]`:                                 `[]`,
-		`"<&>"`:                              `"<&>"`,
-	} {
-		v, err := parsePyJSON(in)
-		if err != nil {
-			t.Fatalf("%q: %v", in, err)
-		}
-		got, merr := marshalJSON(v)
-		if merr != nil || string(got) != want {
-			t.Errorf("%q: %s %v, want %s", in, got, merr, want)
-		}
-	}
-	if _, err := parsePyJSON(strings.Repeat("[", 600) + strings.Repeat("]", 600)); err == nil || err.Pos != -1 {
-		t.Fatalf("deep nesting: %v", err)
-	}
-	if (&pyJSONError{"m", 1}).Error() != "m" {
-		t.Fatal("Error")
-	}
-}
-
 func TestUserCreateEdgeCases(t *testing.T) {
 	for _, c := range []struct {
 		ct, body string
@@ -89,7 +13,12 @@ func TestUserCreateEdgeCases(t *testing.T) {
 		detail   string
 	}{
 		{"application/json", "\xff{}", 400, `"There was an error parsing the body"`},
-		{"application/json", strings.Repeat("[", 600), 400, `"There was an error parsing the body"`},
+		{"application/json", `{"username":"x",`, 422, `[{"type":"json_invalid","loc":["body",16],"msg":"JSON decode error","input":{},"ctx":{"error":"unexpected end of JSON input"}}]`},
+		{"application/json", `{"a":1}}`, 422, `[{"type":"json_invalid","loc":["body",7],"msg":"JSON decode error","input":{},"ctx":{"error":"extra data after the JSON value"}}]`},
+		{"application/json", `{"a" 1}`, 422, `[{"type":"json_invalid","loc":["body",5],"msg":"JSON decode error","input":{},"ctx":{"error":"invalid character '1' after object key"}}]`},
+		{"application/json", "", 422, `[{"type":"missing","loc":["body"],"msg":"Field required","input":null}]`},
+		{"application/json", `[]`, 422, `[{"type":"model_attributes_type","loc":["body"],"msg":"Input should be a valid dictionary or object to extract fields from","input":[]}]`},
+		{"application/json", `{"password":"long-enough"}`, 422, `[{"type":"missing","loc":["body","username"],"msg":"Field required","input":{"password":"long-enough"}}]`},
 		{"application/json", "\xef\xbb\xbf{\"username\":\"bomuser\",\"password\":\"long-enough\"}", 0, ""},
 		{"application/vnd.api+json", `{"username":"plusjson","password":"long-enough"}`, 0, ""},
 		{"APPLICATION/JSON; charset=utf-8", `{"username":"upper","password":"long-enough"}`, 0, ""},

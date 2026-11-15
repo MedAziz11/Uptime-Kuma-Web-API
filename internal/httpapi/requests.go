@@ -14,8 +14,8 @@ import (
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/auth"
 )
 
-// This file decodes and validates request bodies with 2.0's rules and
-// error messages (FastAPI forms, pydantic models).
+// This file decodes and validates the login form and the user body with
+// 2.0's rules and error messages (FastAPI forms, pydantic models).
 
 // mediaType returns the lower-cased media type of a Content-Type header.
 func mediaType(contentType string) (string, map[string]string) {
@@ -168,33 +168,14 @@ const (
 	passwordMinLength = 8
 )
 
-// parseUserCreate decodes and validates a POST /users body like 2.0: a JSON
-// body (by Content-Type) is parsed with Python's rules, anything else is
-// passed as a string and rejected, and every field error is reported.
+// parseUserCreate decodes and validates a POST /users body like 2.0: every
+// field error is reported.
 func parseUserCreate(contentType string, body []byte) (username, password string, _ *apiError) {
-	if len(body) == 0 {
-		return "", "", errValidation([]validationIssue{missing([]any{"body"}, nil)})
+	value, aerr := decodeJSONBody(contentType, body)
+	if aerr != nil {
+		return "", "", aerr
 	}
-	mt, _ := mediaType(contentType)
-	if mt != "application/json" && !(strings.HasPrefix(mt, "application/") && strings.HasSuffix(mt, "+json")) {
-		return "", "", errValidation([]validationIssue{notAnObject(strings.ToValidUTF8(string(body), "�"))})
-	}
-
-	text := string(bytes.TrimPrefix(body, []byte("\xef\xbb\xbf")))
-	if !utf8.ValidString(text) {
-		return "", "", errBodyParsing()
-	}
-	value, perr := parsePyJSON(text)
-	if perr != nil {
-		if perr.Pos < 0 {
-			return "", "", errBodyParsing()
-		}
-		return "", "", errValidation([]validationIssue{{
-			Type: "json_invalid", Loc: []any{"body", perr.Pos}, Msg: "JSON decode error",
-			Input: map[string]any{}, Ctx: map[string]any{"error": perr.Msg},
-		}})
-	}
-	obj, ok := value.(*pyObject)
+	obj, ok := value.(map[string]any)
 	if !ok {
 		return "", "", errValidation([]validationIssue{notAnObject(value)})
 	}
@@ -242,8 +223,8 @@ func notAnObject(input any) validationIssue {
 	}
 }
 
-func stringField(obj *pyObject, name string) (string, *validationIssue) {
-	v, ok := obj.get(name)
+func stringField(obj map[string]any, name string) (string, *validationIssue) {
+	v, ok := obj[name]
 	if !ok {
 		i := missing([]any{"body", name}, obj)
 		return "", &i

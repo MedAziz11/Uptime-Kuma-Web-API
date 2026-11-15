@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
@@ -136,6 +137,7 @@ func (s *Server) routes(maxBody int64) {
 		w.Header().Set("Location", "/docs")
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	})
+	s.mux.HandleFunc("GET /redoc", s.redoc)
 	s.mux.HandleFunc("/", s.notFound)
 
 	huma.Register(s.api, op(http.MethodGet, "/health", "health_health_get", "Liveness probe", "Health", false),
@@ -159,6 +161,42 @@ func (s *Server) routes(maxBody int64) {
 	huma.Register(s.api, op(http.MethodDelete, "/users/{username}", "delete_user_users__username__delete", "Delete a user (admin only)", "Users", true), s.deleteUser)
 
 	s.documentValidationErrors()
+}
+
+// redocPage is FastAPI's ReDoc page (get_redoc_html), which 2.0 serves at
+// /redoc: it loads ReDoc from the same CDN and reads /openapi.json.
+const redocPage = `<!DOCTYPE html>
+<html>
+<head>
+<title>Uptime-Kuma-API - ReDoc</title>
+<!-- needed for adaptive design -->
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+<link rel="shortcut icon" href="https://fastapi.tiangolo.com/img/favicon.png">
+<!--
+ReDoc doesn't change outer page styles
+-->
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+  }
+</style>
+</head>
+<body>
+<noscript>
+    ReDoc requires Javascript to function. Please enable it to browse the documentation.
+</noscript>
+<redoc spec-url="/openapi.json"></redoc>
+<script src="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js"> </script>
+</body>
+</html>
+`
+
+func (s *Server) redoc(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = io.WriteString(w, redocPage)
 }
 
 // documentBody replaces the "binary" request body huma documents for a raw

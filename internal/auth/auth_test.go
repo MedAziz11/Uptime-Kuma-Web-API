@@ -94,9 +94,11 @@ func TestPythonHashesVerify(t *testing.T) {
 		"pässwörd-密码":     "$2b$12$1zHeFuS.cgodyLV/debx..FSTdtx2PLgKT/jew9MWBcid.Dm7Uf22",
 		"legacy-password": "$2b$12$SDyqfINUtOmaqjEMQdHsvePQDgIo..7zmCCrXppxhY.Vpr1up9J.O",
 	}
+	// One check per hash: cost 12 takes seconds under the race detector, and
+	// wrong passwords are tested at MinCost above.
 	p := passwords(t)
 	for pw, h := range hashes {
-		if !p.Verify(pw, h) || p.Verify(pw+"!", h) {
+		if !p.Verify(pw, h) {
 			t.Fatalf("%q against %q", pw, h)
 		}
 	}
@@ -111,7 +113,7 @@ func TestUnknownUserTakesAsLongAsAWrongPassword(t *testing.T) {
 	if testing.Short() {
 		t.Skip("timing test")
 	}
-	p, err := NewPasswords(10)
+	p, err := NewPasswords(8)
 	if err != nil {
 		t.Fatal(err)
 	}

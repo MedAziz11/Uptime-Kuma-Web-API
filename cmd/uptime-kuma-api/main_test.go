@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/version"
 )
 
@@ -58,7 +60,9 @@ func start(t *testing.T, vars map[string]string, logs io.Writer) (string, func()
 	ctx, cancel := context.WithCancel(context.Background())
 	addr := make(chan net.Addr, 1)
 	code := make(chan int, 1)
-	go func() { code <- run(ctx, nil, lookup(vars), io.Discard, logs, func(a net.Addr) { addr <- a }) }()
+	go func() {
+		code <- run(ctx, nil, lookup(vars), io.Discard, logs, hooks{ready: func(a net.Addr) { addr <- a }, bcryptCost: bcrypt.MinCost})
+	}()
 	select {
 	case a := <-addr:
 		return "http://" + a.String(), func() int { cancel(); return <-code }
@@ -154,7 +158,7 @@ func TestStartServeAndRestart(t *testing.T) {
 
 func TestConfigurationErrors(t *testing.T) {
 	var stderr bytes.Buffer
-	code := run(context.Background(), nil, lookup(map[string]string{"KUMA_PASSWORD": "kuma-password-secret", "KUMA_TIMEOUT": "0"}), io.Discard, &stderr, nil)
+	code := run(context.Background(), nil, lookup(map[string]string{"KUMA_PASSWORD": "kuma-password-secret", "KUMA_TIMEOUT": "0"}), io.Discard, &stderr, hooks{})
 	if code != exitConfig {
 		t.Fatalf("exit %d", code)
 	}
@@ -163,11 +167,11 @@ func TestConfigurationErrors(t *testing.T) {
 		!strings.Contains(out, "KUMA_TIMEOUT must be greater than 0") || strings.Contains(out, "kuma-password-secret") || !json.Valid(bytes.TrimSpace(stderr.Bytes())) {
 		t.Fatalf("stderr %s", out)
 	}
-	if code := run(context.Background(), []string{"-bogus"}, lookup(nil), io.Discard, io.Discard, nil); code != exitConfig {
+	if code := run(context.Background(), []string{"-bogus"}, lookup(nil), io.Discard, io.Discard, hooks{}); code != exitConfig {
 		t.Fatalf("bad flag: %d", code)
 	}
 	var stdout bytes.Buffer
-	if code := run(context.Background(), []string{"-version"}, lookup(nil), &stdout, io.Discard, nil); code != exitOK || stdout.String() != version.Version+"\n" {
+	if code := run(context.Background(), []string{"-version"}, lookup(nil), &stdout, io.Discard, hooks{}); code != exitOK || stdout.String() != version.Version+"\n" {
 		t.Fatalf("-version: %d %q", code, stdout.String())
 	}
 }
@@ -189,7 +193,7 @@ func TestRuntimeErrors(t *testing.T) {
 			vars := baseEnv(t.TempDir())
 			mutate(vars)
 			var stderr lockedBuffer
-			if code := run(context.Background(), nil, lookup(vars), io.Discard, &stderr, nil); code != exitFailed {
+			if code := run(context.Background(), nil, lookup(vars), io.Discard, &stderr, hooks{bcryptCost: bcrypt.MinCost}); code != exitFailed {
 				t.Fatalf("exit %d: %s", code, stderr.String())
 			}
 			if !strings.Contains(stderr.String(), `"level":"ERROR"`) {

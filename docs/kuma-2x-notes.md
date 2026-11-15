@@ -82,3 +82,20 @@ a push, not in the ack.
 `monitorImportantHeartbeatListCount` / `...Paged(id, offset, count)`; incidents on status pages
 (`postIncident`, `getIncidentHistory`, `editIncident`, `deleteIncident`, `resolveIncident`,
 `unpinIncident`); remote browsers; API keys (`addAPIKey`, `getAPIKeyList`, enable/disable/delete).
+
+## Differences from 2.0
+
+The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does not reproduce
+2.0's error texts byte for byte. Known and deliberate differences:
+
+| Area | 2.0 | 3.0 | Why |
+| ---- | --- | --- | --- |
+| Path no route serves, without a valid token | 404 | 401 | Authentication runs before routing (default deny) |
+| `HEAD` on a `GET` route | 405 | answered like `GET` | `net/http` serves `HEAD` for `GET` routes |
+| `/openapi.json` content type | `application/json` | `application/openapi+json` | huma's document handler |
+| `/docs` content type | `text/html; charset=utf-8` | `text/html` | huma's docs handler |
+| `Allow` header of a 405 | first route's methods | every method of the path | |
+| Malformed JSON body without a token | 422 | 401 | The token is checked before the body is read |
+| 422 for a malformed JSON body | Python's message and character position | Go's message and byte offset | Same `type` (`json_invalid`) and shape |
+| Order of keys in the `input` echoed by a 422 | request order | sorted | `encoding/json` maps |
+| JSON nested deeper than Python's recursion limit | 400 | 422 `json_invalid` (beyond Go's limit of 10000) | |
