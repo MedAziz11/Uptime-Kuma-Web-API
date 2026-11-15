@@ -94,6 +94,7 @@ type Session struct {
 	handlersMu sync.RWMutex
 	handlers   map[string]Handler
 	onReset    func()
+	onLogin    func()
 
 	mu      sync.Mutex
 	started bool
@@ -173,9 +174,24 @@ func (s *Session) OnReset(f func()) {
 	s.onReset = f
 }
 
-func (s *Session) reset() {
+// OnLogin registers f to run after each successful login, once every event
+// Uptime Kuma pushed during the login was dispatched and before the
+// connection is used: state built from pushes is complete there. f runs on
+// the session's own goroutine and must return quickly. Register it before
+// the first Call.
+func (s *Session) OnLogin(f func()) {
+	s.handlersMu.Lock()
+	defer s.handlersMu.Unlock()
+	s.onLogin = f
+}
+
+func (s *Session) reset() { s.runHook(&s.onReset) }
+
+func (s *Session) loggedIn() { s.runHook(&s.onLogin) }
+
+func (s *Session) runHook(hook *func()) {
 	s.handlersMu.RLock()
-	f := s.onReset
+	f := *hook
 	s.handlersMu.RUnlock()
 	if f != nil {
 		f()
@@ -414,6 +430,11 @@ func (s *Session) supervise() {
 	backoff := s.minBackoff
 	for {
 		c, err := s.connect()
+		if err == nil {
+			// Uptime Kuma answers the login after its pushes: the state
+			// they build is complete before any caller uses c.
+			s.loggedIn()
+		}
 
 		s.mu.Lock()
 		close(s.attempt)

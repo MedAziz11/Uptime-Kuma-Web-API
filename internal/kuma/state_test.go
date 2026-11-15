@@ -68,33 +68,33 @@ func TestStateReplaysRecordedPushes(t *testing.T) {
 		{Monitors, "2,3"}, {Maintenances, ""}, {Notifications, "2"}, {Proxies, "2"},
 		{DockerHosts, "2"}, {APIKeys, "1"}, {StatusPages, ""},
 	} {
-		if got := ids(st.Objects(c.list)); got != c.want {
+		if got := ids(objectsOf(st, c.list)); got != c.want {
 			t.Errorf("%v: ids %q, want %q", c.list, got, c.want)
 		}
 	}
-	info, ok := st.Info()
+	info, ok := infoOf(st)
 	var v struct{ Version string }
 	if !ok || json.Unmarshal(info, &v) != nil || v.Version != "2.5.11" {
 		t.Fatalf("info %s", info)
 	}
-	if ping := st.AvgPing(); len(ping) != 1 || string(ping[2]) != "null" {
+	if ping := avgPingOf(st); len(ping) != 1 || string(ping[2]) != "null" {
 		t.Fatalf("avgPing %v (monitor 1 was deleted)", ping)
 	}
-	up := st.Uptime()[2]
+	up := uptimeOf(st)[2]
 	if len(up) != 3 || string(up["24"]) != "0" || string(up["720"]) != "0" || string(up["1y"]) != "0" {
 		t.Fatalf("uptime %v", up)
 	}
-	if beats := st.Heartbeats(2); len(beats) != 1 || !strings.Contains(string(beats[0]), `"Group empty"`) {
+	if beats := heartbeatsOf(st, 2); len(beats) != 1 || !strings.Contains(string(beats[0]), `"Group empty"`) {
 		t.Fatalf("heartbeats %s", beats)
 	}
-	if len(st.Heartbeats(1)) != 0 {
+	if len(heartbeatsOf(st, 1)) != 0 {
 		t.Fatal("heartbeats of the deleted monitor kept")
 	}
-	m, ok := st.Object(Monitors, 3)
+	m, ok := objectOf(st, Monitors, 3)
 	if !ok || !strings.Contains(string(m), `"capture push"`) {
 		t.Fatalf("monitor 3: %s", m)
 	}
-	if _, ok := st.Object(Monitors, 1); ok {
+	if _, ok := objectOf(st, Monitors, 1); ok {
 		t.Fatal("deleted monitor kept")
 	}
 }
@@ -117,7 +117,7 @@ func TestStateHandlers(t *testing.T) {
 			{"heartbeat", raw(`{"monitorID":7,"n":3}`)},
 			{"heartbeatList", raw(`7`, `[{"monitorID":7,"n":4}]`, `false`)},
 		}, func(t *testing.T, st *State) {
-			if b := st.Heartbeats(7); len(b) != 4 || !strings.Contains(string(b[3]), `"n":4`) {
+			if b := heartbeatsOf(st, 7); len(b) != 4 || !strings.Contains(string(b[3]), `"n":4`) {
 				t.Fatalf("%s", b)
 			}
 		}},
@@ -125,7 +125,7 @@ func TestStateHandlers(t *testing.T) {
 			{"heartbeat", raw(`{"monitorID":7,"n":1}`)},
 			{"heartbeatList", raw(`7`, `[{"monitorID":7,"n":2}]`, `true`)},
 		}, func(t *testing.T, st *State) {
-			if b := st.Heartbeats(7); len(b) != 1 || !strings.Contains(string(b[0]), `"n":2`) {
+			if b := heartbeatsOf(st, 7); len(b) != 1 || !strings.Contains(string(b[0]), `"n":2`) {
 				t.Fatalf("%s", b)
 			}
 		}},
@@ -133,7 +133,7 @@ func TestStateHandlers(t *testing.T) {
 			{"certInfo", raw(`5`, `"{\"valid\":true}"`)},
 			{"certInfo", raw(`6`, `"not json"`)},
 		}, func(t *testing.T, st *State) {
-			ci := st.CertInfo()
+			ci := certInfoOf(st)
 			if len(ci) != 1 || string(ci[5]) != `{"valid":true}` {
 				t.Fatalf("%v", ci)
 			}
@@ -141,7 +141,7 @@ func TestStateHandlers(t *testing.T) {
 		{"info without a version is ignored", [][2]any{
 			{"info", raw(`{"serverTimezone":"UTC"}`)},
 		}, func(t *testing.T, st *State) {
-			if _, ok := st.Info(); ok {
+			if _, ok := infoOf(st); ok {
 				t.Fatal("info set")
 			}
 		}},
@@ -149,10 +149,10 @@ func TestStateHandlers(t *testing.T) {
 			{"monitorList", raw(`{"1":{"id":1,"name":"a"},"2":{"id":2,"name":"b"}}`)},
 			{"updateMonitorIntoList", raw(`{"2":{"id":2,"name":"B"},"3":{"id":3,"name":"c"}}`)},
 		}, func(t *testing.T, st *State) {
-			if got := ids(st.Objects(Monitors)); got != "1,2,3" {
+			if got := ids(objectsOf(st, Monitors)); got != "1,2,3" {
 				t.Fatal(got)
 			}
-			if m, _ := st.Object(Monitors, 2); !strings.Contains(string(m), `"B"`) {
+			if m, _ := objectOf(st, Monitors, 2); !strings.Contains(string(m), `"B"`) {
 				t.Fatalf("%s", m)
 			}
 		}},
@@ -176,10 +176,10 @@ func TestStateHandlers(t *testing.T) {
 			{"certInfo", raw(`1`)},
 			{"info", raw()},
 		}, func(t *testing.T, st *State) {
-			if got := ids(st.Objects(Monitors)); got != "1" {
+			if got := ids(objectsOf(st, Monitors)); got != "1" {
 				t.Fatal(got)
 			}
-			if len(st.Objects(Notifications)) != 0 || len(st.AvgPing()) != 0 || len(st.Uptime()) != 0 {
+			if len(objectsOf(st, Notifications)) != 0 || len(avgPingOf(st)) != 0 || len(uptimeOf(st)) != 0 {
 				t.Fatal("malformed push stored")
 			}
 		}},
@@ -201,14 +201,14 @@ func TestHeartbeatsAreBounded(t *testing.T) {
 	for i := range 3 * MaxHeartbeats {
 		h["heartbeat"]([]json.RawMessage{json.RawMessage(`{"monitorID":1,"n":` + strconv.Itoa(i) + `}`)})
 	}
-	b := st.Heartbeats(1)
+	b := heartbeatsOf(st, 1)
 	if len(b) != MaxHeartbeats || !strings.Contains(string(b[len(b)-1]), strconv.Itoa(3*MaxHeartbeats-1)) {
 		t.Fatalf("%d beats, last %s", len(b), b[len(b)-1])
 	}
 	long := "[" + strings.Repeat(`{"monitorID":1},`, 2*MaxHeartbeats) + `{"monitorID":1}]`
 	h["heartbeatList"]([]json.RawMessage{json.RawMessage("1"), json.RawMessage(long), json.RawMessage("true")})
-	if len(st.Heartbeats(1)) != MaxHeartbeats {
-		t.Fatalf("%d beats", len(st.Heartbeats(1)))
+	if len(heartbeatsOf(st, 1)) != MaxHeartbeats {
+		t.Fatalf("%d beats", len(heartbeatsOf(st, 1)))
 	}
 }
 
@@ -222,17 +222,17 @@ func TestResetAndVersions(t *testing.T) {
 		t.Fatal("version did not grow")
 	}
 	st.Reset()
-	if len(st.Objects(Monitors)) != 0 || len(st.AvgPing()) != 0 || st.Version(Monitors) != v+2 {
+	if len(objectsOf(st, Monitors)) != 0 || len(avgPingOf(st)) != 0 || st.Version(Monitors) != v+2 {
 		t.Fatal("reset kept state")
 	}
 	if !st.PutObject(StatusPages, json.RawMessage(`{"id":4,"slug":"x"}`)) || st.PutObject(StatusPages, json.RawMessage(`{"slug":"y"}`)) {
 		t.Fatal("PutObject")
 	}
-	if o, ok := st.Object(StatusPages, 4); !ok || string(o) != `{"id":4,"slug":"x"}` {
+	if o, ok := objectOf(st, StatusPages, 4); !ok || string(o) != `{"id":4,"slug":"x"}` {
 		t.Fatalf("%s", o)
 	}
 	st.DeleteObject(StatusPages, 4)
-	if len(st.Objects(StatusPages)) != 0 {
+	if len(objectsOf(st, StatusPages)) != 0 {
 		t.Fatal("DeleteObject")
 	}
 	if Monitors.String() != "monitors" || List(99).String() != "list(99)" {
@@ -260,4 +260,41 @@ func TestWaitVersion(t *testing.T) {
 	if err := st.WaitVersion(ctx, Proxies, st.Version(Proxies)); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v", err)
 	}
+}
+
+// Reads without their Snapshot, for tests about the data.
+
+func objectsOf(st *State, l List) []json.RawMessage {
+	o, _ := st.Objects(l)
+	return o
+}
+
+func objectOf(st *State, l List, id int64) (json.RawMessage, bool) {
+	o, ok, _ := st.Object(l, id)
+	return o, ok
+}
+
+func infoOf(st *State) (json.RawMessage, bool) {
+	info, _ := st.Info()
+	return info, info != nil
+}
+
+func heartbeatsOf(st *State, id int64) []json.RawMessage {
+	b, _ := st.Heartbeats(id)
+	return b
+}
+
+func avgPingOf(st *State) map[int64]json.RawMessage {
+	m, _ := st.AvgPing()
+	return m
+}
+
+func uptimeOf(st *State) map[int64]map[string]json.RawMessage {
+	m, _ := st.Uptime()
+	return m
+}
+
+func certInfoOf(st *State) map[int64]json.RawMessage {
+	m, _ := st.CertInfo()
+	return m
 }

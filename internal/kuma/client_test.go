@@ -88,11 +88,11 @@ func TestClientReadYourWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := int64(field[float64](t, must(c.AddMonitor(ctx, m)), "monitorID"))
-	if _, ok := st.Object(Monitors, id); !ok {
+	if _, ok := objectOf(st, Monitors, id); !ok {
 		t.Fatal("added monitor not in State")
 	}
 	must(c.PauseMonitor(ctx, id))
-	cur, _ := st.Object(Monitors, id)
+	cur, _ := objectOf(st, Monitors, id)
 	if field[bool](t, cur, "active") {
 		t.Fatal("pause not visible")
 	}
@@ -102,7 +102,7 @@ func TestClientReadYourWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	must(c.EditMonitor(ctx, edited))
-	cur, _ = st.Object(Monitors, id)
+	cur, _ = objectOf(st, Monitors, id)
 	if field[string](t, cur, "name") != "renamed" {
 		t.Fatal("edit not visible")
 	}
@@ -111,13 +111,13 @@ func TestClientReadYourWrites(t *testing.T) {
 	tag := field[map[string]any](t, must(c.AddTag(ctx, map[string]any{"name": "t", "color": "#fff"})), "tag")
 	tagID := int64(tag["id"].(float64))
 	must(c.AddMonitorTag(ctx, tagID, id, "v"))
-	cur, _ = st.Object(Monitors, id)
+	cur, _ = objectOf(st, Monitors, id)
 	if tags := field[[]map[string]any](t, cur, "tags"); len(tags) != 1 || tags[0]["name"] != "t" {
 		t.Fatalf("tags %v", tags)
 	}
 	tag["name"] = "t2"
 	must(c.EditTag(ctx, tag))
-	cur, _ = st.Object(Monitors, id)
+	cur, _ = objectOf(st, Monitors, id)
 	if tags := field[[]map[string]any](t, cur, "tags"); tags[0]["name"] != "t2" {
 		t.Fatalf("tag rename not visible in the monitor: %v", tags)
 	}
@@ -128,14 +128,14 @@ func TestClientReadYourWrites(t *testing.T) {
 	}
 
 	nid := int64(field[float64](t, must(c.SaveNotification(ctx, map[string]any{"name": "n", "type": "webhook"}, nil)), "id"))
-	if _, ok := st.Object(Notifications, nid); !ok {
+	if _, ok := objectOf(st, Notifications, nid); !ok {
 		t.Fatal("notification not in State")
 	}
 	must(c.TestNotification(ctx, map[string]any{"name": "n"}))
 	must(c.DeleteNotification(ctx, nid))
 	pid := int64(field[float64](t, must(c.SaveProxy(ctx, map[string]any{"protocol": "http", "host": "h", "port": 1}, nil)), "id"))
 	must(c.SaveProxy(ctx, map[string]any{"protocol": "http", "host": "h", "port": 2}, &pid))
-	p, _ := st.Object(Proxies, pid)
+	p, _ := objectOf(st, Proxies, pid)
 	if field[int](t, p, "port") != 2 {
 		t.Fatalf("proxy %s", p)
 	}
@@ -146,14 +146,14 @@ func TestClientReadYourWrites(t *testing.T) {
 	}
 	must(c.DeleteDockerHost(ctx, did))
 	for _, l := range []List{Notifications, Proxies, DockerHosts} {
-		if len(st.Objects(l)) != 0 {
+		if len(objectsOf(st, l)) != 0 {
 			t.Fatalf("%v kept", l)
 		}
 	}
 
 	mid := int64(field[float64](t, must(c.AddMaintenance(ctx, map[string]any{"title": "w", "strategy": "manual", "dateRange": []any{}})), "maintenanceID"))
 	must(c.PauseMaintenance(ctx, mid))
-	mt, _ := st.Object(Maintenances, mid)
+	mt, _ := objectOf(st, Maintenances, mid)
 	if field[bool](t, mt, "active") {
 		t.Fatal("maintenance pause not visible")
 	}
@@ -162,7 +162,7 @@ func TestClientReadYourWrites(t *testing.T) {
 	edit := field[map[string]any](t, got, "maintenance")
 	edit["title"] = "w2"
 	must(c.EditMaintenance(ctx, edit))
-	mt, _ = st.Object(Maintenances, mid)
+	mt, _ = objectOf(st, Maintenances, mid)
 	if field[string](t, mt, "title") != "w2" {
 		t.Fatal("maintenance edit not visible")
 	}
@@ -171,7 +171,7 @@ func TestClientReadYourWrites(t *testing.T) {
 		t.Fatalf("maintenance monitors %v", mons)
 	}
 	must(c.DeleteMaintenance(ctx, mid))
-	if len(st.Objects(Maintenances)) != 0 {
+	if len(objectsOf(st, Maintenances)) != 0 {
 		t.Fatal("maintenance kept")
 	}
 
@@ -181,7 +181,7 @@ func TestClientReadYourWrites(t *testing.T) {
 		t.Fatalf("beats %v", beats)
 	}
 	must(c.DeleteMonitor(ctx, id))
-	if _, ok := st.Object(Monitors, id); ok {
+	if _, ok := objectOf(st, Monitors, id); ok {
 		t.Fatal("deleted monitor kept")
 	}
 	if field[int](t, must(c.DatabaseSize(ctx)), "size") == 0 {
@@ -197,7 +197,7 @@ func TestClientStatusPages(t *testing.T) {
 	ctx := context.Background()
 	st := c.State()
 	must(c.AddStatusPage(ctx, "Page", "page"))
-	pages := st.Objects(StatusPages)
+	pages := objectsOf(st, StatusPages)
 	if len(pages) != 1 || field[string](t, pages[0], "slug") != "page" {
 		t.Fatalf("pages %s", pages)
 	}
@@ -208,7 +208,7 @@ func TestClientStatusPages(t *testing.T) {
 	if groups := field[[]any](t, ack, "publicGroupList"); len(groups) != 1 {
 		t.Fatalf("ack %s", ack)
 	}
-	p, _ := st.Object(StatusPages, id)
+	p, _ := objectOf(st, StatusPages, id)
 	if field[string](t, p, "slug") != "renamed" {
 		t.Fatalf("save not visible: %s", p)
 	}
@@ -222,7 +222,7 @@ func TestClientStatusPages(t *testing.T) {
 	}
 	must(c.UnpinIncident(ctx, "renamed"))
 	must(c.DeleteStatusPage(ctx, "renamed", id))
-	if len(st.Objects(StatusPages)) != 0 {
+	if len(objectsOf(st, StatusPages)) != 0 {
 		t.Fatal("deleted page kept")
 	}
 	if _, err := c.PublicStatusPage(ctx, "renamed"); !errors.Is(err, ErrNotFound) {
@@ -305,22 +305,22 @@ func TestClientStateFollowsReconnects(t *testing.T) {
 	m, _ := NewMonitor(map[string]any{"name": "a"})
 	id := int64(field[float64](t, must(c.AddMonitor(ctx, m)), "monitorID"))
 	k.Beat(int(id), 1, 10)
-	waitUntil(t, func() bool { return len(c.State().Heartbeats(id)) == 1 })
+	waitUntil(t, func() bool { return len(heartbeatsOf(c.State(), id)) == 1 })
 	c.State().PutObject(StatusPages, json.RawMessage(`{"id":99,"slug":"stale"}`))
 
 	k.DisconnectAll()
-	waitUntil(t, func() bool { _, ok := c.State().Object(StatusPages, 99); return !ok })
+	waitUntil(t, func() bool { _, ok := objectOf(c.State(), StatusPages, 99); return !ok })
 	if err := c.Sync(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := c.State().Object(Monitors, id); !ok {
+	if _, ok := objectOf(c.State(), Monitors, id); !ok {
 		t.Fatal("monitor list not pushed again")
 	}
-	if _, ok := c.State().Info(); !ok {
+	if _, ok := infoOf(c.State()); !ok {
 		t.Fatal("info not pushed again")
 	}
-	if len(c.State().Heartbeats(id)) != 1 || len(c.State().AvgPing()) != 1 {
-		t.Fatalf("heartbeats %d, avgPing %v", len(c.State().Heartbeats(id)), c.State().AvgPing())
+	if len(heartbeatsOf(c.State(), id)) != 1 || len(avgPingOf(c.State())) != 1 {
+		t.Fatalf("heartbeats %d, avgPing %v", len(heartbeatsOf(c.State(), id)), avgPingOf(c.State()))
 	}
 }
 

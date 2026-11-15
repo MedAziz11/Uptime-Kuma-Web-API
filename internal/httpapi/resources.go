@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"maps"
 	"net/http"
 	"slices"
@@ -163,20 +164,47 @@ func (s *Server) deleteTag(ctx context.Context, in *tagIDParam) (*jsonOutput[Kum
 	return s.answer(ctx)(s.kuma.DeleteTag(ctx, in.TagID))
 }
 
-// objects returns a pushed list, once the session is logged in.
-func (s *Server) objects(ctx context.Context, l kuma.List) ([]json.RawMessage, error) {
+// state returns the State once the session is logged in.
+func (s *Server) state(ctx context.Context) (*kuma.State, error) {
 	if err := s.kuma.Sync(ctx); err != nil {
 		return nil, s.kumaError(ctx, err)
 	}
-	return s.kuma.State().Objects(l), nil
+	return s.kuma.State(), nil
+}
+
+// synced is the answer for a read of State: an error unless State held a
+// complete login state when it was read. The connection may drop between
+// Sync and the read; an empty list must not be answered then.
+func (s *Server) synced(ctx context.Context, snap kuma.Snapshot) error {
+	if !snap.Synced {
+		return s.kumaError(ctx, fmt.Errorf("%w: the connection was lost while reading", kuma.ErrUnavailable))
+	}
+	return nil
+}
+
+// objects returns a pushed list, once the session is logged in.
+func (s *Server) objects(ctx context.Context, l kuma.List) ([]json.RawMessage, error) {
+	st, err := s.state(ctx)
+	if err != nil {
+		return nil, err
+	}
+	list, snap := st.Objects(l)
+	if err := s.synced(ctx, snap); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
 
 // object returns an object of a pushed list, or a 404 with detail.
 func (s *Server) object(ctx context.Context, l kuma.List, id int64, detail string) (json.RawMessage, error) {
-	if err := s.kuma.Sync(ctx); err != nil {
-		return nil, s.kumaError(ctx, err)
+	st, err := s.state(ctx)
+	if err != nil {
+		return nil, err
 	}
-	o, ok := s.kuma.State().Object(l, id)
+	o, ok, snap := st.Object(l, id)
+	if err := s.synced(ctx, snap); err != nil {
+		return nil, err
+	}
 	if !ok {
 		return nil, errNotFound(detail)
 	}

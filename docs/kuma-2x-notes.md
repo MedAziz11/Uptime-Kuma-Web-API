@@ -133,3 +133,31 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 - `GET /api/status-page/{slug}` is cached by Kuma for minutes and the cache is not cleared by
   `postIncident` or `unpinIncident`; Kuma's cache honours `Cache-Control: no-cache`, which the API
   sends.
+- Every read of `State` reports, under the same lock, whether `State` holds a complete login
+  state (false from the reset before a connection to the end of the next login). A route answers
+  503 when it does not, never an empty list.
+- Monitor pushes can arrive out of order: Kuma builds `monitorList` and `updateMonitorIntoList`
+  from database reads with many awaits and emits them when done, so a list read before a change
+  committed can arrive after the push of that change (a deleted monitor comes back, a new one
+  disappears, an edit is reverted). Monitor ids are never reused: `State` remembers the ids
+  deleted on the current connection and ignores them in later monitor and statistics pushes. A
+  full list is trusted only if no other monitor push came close to it: our own `getMonitorList`
+  is fetched again (at most 3 times) if an update, a deletion or another list arrived between the
+  request and the answer; a list we did not ask for is verified with one debounced fetch only if
+  an update or deletion was applied less than 2 s before it (verifying every unrequested list
+  would never settle with two API instances on one Kuma user).
+
+## Known limitations
+
+- The other full lists (`notificationList`, `proxyList`, `dockerHostList`, `apiKeyList`,
+  `maintenanceList`) are applied as they arrive. Kuma builds the first four from one database
+  query each and emits right after it (`server/client.js`): they arrive in order as long as the
+  database answers queries in order, which holds for SQLite through Kuma's single connection but
+  not necessarily for MariaDB with a connection pool. `maintenanceList` is built with one await per
+  maintenance (`getMaintenanceJSONList`), so two concurrent maintenance writes can make an older
+  list arrive last. `getMaintenanceList` and `getAPIKeyList` could re-fetch, but nothing verifies
+  these lists; a stale one is corrected by the next push of the same list (the next write of that
+  kind, or a login of the same Kuma user).
+- `TestRealKumaMonitorListConsistency` checks the monitor list after a concurrent load on a real
+  Kuma, but on the test instance it did not reproduce the out-of-order push without the fix
+  either; the orders themselves are covered by the fake Kuma's tests (`internal/kuma/race_test.go`).

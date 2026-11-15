@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"time"
 )
 
 // List names a part of the state Uptime Kuma pushes.
@@ -46,6 +47,33 @@ func (l List) String() string {
 // of the list Uptime Kuma sends at login).
 const MaxHeartbeats = 100
 
+// Out-of-order monitor pushes. Uptime Kuma builds a monitor list (full, or
+// one monitor for updateMonitorIntoList) from database reads with many
+// awaits and emits it when done, so a list read before a change committed
+// can arrive after the push of that change: a deleted monitor comes back,
+// a new one disappears, an edit is reverted. Monitor ids are never reused,
+// so deletions are remembered (tombstones) and later pushes of those ids
+// ignored; a full list that arrives close after another monitor event is
+// verified by fetching it again (Client).
+const (
+	// raceWindow is how close to a monitor event a full list must arrive
+	// to be suspect: stale lists arrive within seconds.
+	raceWindow = 2 * time.Second
+	// tombstoneTTL is how long a deletion is remembered once there are
+	// more than maxTombstones of them.
+	tombstoneTTL  = 10 * time.Minute
+	maxTombstones = 1000
+)
+
+// Snapshot describes a read of State: the version of the list read, and
+// whether State held a complete login state at that moment. A read with
+// Synced false must not be answered as data: State was reset (the
+// connection dropped) and the next login has not pushed everything yet.
+type Snapshot struct {
+	Version uint64
+	Synced  bool
+}
+
 // State is what Uptime Kuma pushed: its objects as it sent them, keyed by
 // id. Every list has a version that grows with each change, so that a
 // writer can wait for its change to arrive (WaitVersion).
@@ -58,17 +86,28 @@ type State struct {
 	versions [numLists]uint64
 	changed  chan struct{} // closed and replaced on every change
 
+	// synced is true from the end of a login to the next Reset.
+	synced bool
+
 	objects  [APIKeys + 1]map[int64]json.RawMessage // Monitors to APIKeys, by id
 	info     json.RawMessage
 	beats    map[int64][]json.RawMessage
 	avgPing  map[int64]json.RawMessage
 	uptime   map[int64]map[string]json.RawMessage
 	certInfo map[int64]json.RawMessage
+
+	// Bookkeeping of out-of-order monitor pushes, for this connection.
+	deleted       map[int64]time.Time // tombstones: deleted monitor ids
+	monitorEvents uint64              // updates and deletions applied
+	monitorLists  uint64              // full lists applied
+	lastEvent     time.Time           // when the last update or deletion was applied
+	onRacedList   func()              // called (unlocked) for a suspect full list
+	now           func() time.Time
 }
 
 // NewState returns an empty State.
 func NewState() *State {
-	st := &State{changed: make(chan struct{})}
+	st := &State{changed: make(chan struct{}), now: time.Now}
 	st.clearLocked()
 	return st
 }
@@ -82,14 +121,18 @@ func (st *State) clearLocked() {
 	st.avgPing = map[int64]json.RawMessage{}
 	st.uptime = map[int64]map[string]json.RawMessage{}
 	st.certInfo = map[int64]json.RawMessage{}
+	st.deleted = map[int64]time.Time{}
+	st.monitorEvents, st.monitorLists, st.lastEvent = 0, 0, time.Time{}
+	st.synced = false
 }
 
 // Register makes s feed st: handlers for the pushed events, and a reset
 // before each connection. Call it before the session's first call.
 func (st *State) Register(s *Session) {
 	s.OnReset(st.Reset)
+	s.OnLogin(st.markSynced)
 	for event, h := range map[string]Handler{
-		"monitorList":           st.replaceObject(Monitors),
+		"monitorList":           st.onMonitorList,
 		"maintenanceList":       st.replaceObject(Maintenances),
 		"statusPageList":        st.replaceObject(StatusPages),
 		"notificationList":      st.replaceArray(Notifications),
@@ -107,6 +150,13 @@ func (st *State) Register(s *Session) {
 	} {
 		s.Handle(event, h)
 	}
+}
+
+// markSynced records that the login's pushes were all applied.
+func (st *State) markSynced() {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	st.synced = true
 }
 
 // Reset forgets everything, as before a new login.
@@ -157,9 +207,13 @@ func (st *State) WaitVersion(ctx context.Context, l List, after uint64) error {
 	}
 }
 
+func (st *State) snapshotLocked(l List) Snapshot {
+	return Snapshot{Version: st.versions[l], Synced: st.synced}
+}
+
 // Objects returns the objects of list l (Monitors to APIKeys) by
 // increasing id.
-func (st *State) Objects(l List) []json.RawMessage {
+func (st *State) Objects(l List) ([]json.RawMessage, Snapshot) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 	m := st.objects[l]
@@ -168,15 +222,15 @@ func (st *State) Objects(l List) []json.RawMessage {
 	for i, id := range ids {
 		out[i] = m[id]
 	}
-	return out
+	return out, st.snapshotLocked(l)
 }
 
 // Object returns the object of list l with id.
-func (st *State) Object(l List, id int64) (json.RawMessage, bool) {
+func (st *State) Object(l List, id int64) (json.RawMessage, bool, Snapshot) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 	v, ok := st.objects[l][id]
-	return v, ok
+	return v, ok, st.snapshotLocked(l)
 }
 
 // PutObject stores obj under its "id" in list l: for lists Uptime Kuma does
@@ -203,42 +257,51 @@ func (st *State) DeleteObject(l List, id int64) {
 
 // Info returns the server info, once it carries the version (Uptime Kuma
 // sends a shorter one before the login).
-func (st *State) Info() (json.RawMessage, bool) {
+// It is nil until then.
+func (st *State) Info() (json.RawMessage, Snapshot) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	return st.info, st.info != nil
+	return st.info, st.snapshotLocked(Info)
 }
 
 // Heartbeats returns the last heartbeats of a monitor, oldest first.
-func (st *State) Heartbeats(monitorID int64) []json.RawMessage {
+func (st *State) Heartbeats(monitorID int64) ([]json.RawMessage, Snapshot) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	return slices.Clone(st.beats[monitorID])
+	return slices.Clone(st.beats[monitorID]), st.snapshotLocked(Heartbeats)
 }
 
 // AvgPing returns the average ping of each monitor (null when unknown).
-func (st *State) AvgPing() map[int64]json.RawMessage {
+func (st *State) AvgPing() (map[int64]json.RawMessage, Snapshot) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	return maps.Clone(st.avgPing)
+	return maps.Clone(st.avgPing), st.snapshotLocked(AvgPing)
 }
 
 // CertInfo returns the TLS certificate info of each monitor that has one.
-func (st *State) CertInfo() map[int64]json.RawMessage {
+func (st *State) CertInfo() (map[int64]json.RawMessage, Snapshot) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	return maps.Clone(st.certInfo)
+	return maps.Clone(st.certInfo), st.snapshotLocked(CertInfo)
 }
 
 // Uptime returns each monitor's uptime by period ("24", "720", "1y").
-func (st *State) Uptime() map[int64]map[string]json.RawMessage {
+func (st *State) Uptime() (map[int64]map[string]json.RawMessage, Snapshot) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 	out := make(map[int64]map[string]json.RawMessage, len(st.uptime))
 	for id, m := range st.uptime {
 		out[id] = maps.Clone(m)
 	}
-	return out
+	return out, st.snapshotLocked(Uptime)
+}
+
+// monitorCounts returns how many monitor updates and deletions, and how
+// many full monitor lists, were applied on this connection.
+func (st *State) monitorCounts() (events, lists uint64) {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	return st.monitorEvents, st.monitorLists
 }
 
 // Handlers. Malformed pushes are ignored: the state then lags until the
@@ -284,6 +347,48 @@ func (st *State) replaceArray(l List) Handler {
 	}
 }
 
+// onMonitorList replaces the monitors, without the deleted ones, and
+// reports a list that may be stale.
+//
+// Only a list that arrives within raceWindow after an update or a deletion
+// is suspect. Verifying every list we did not ask for would never settle
+// with two API instances on the same Uptime Kuma user: each one's fetch is
+// an unrequested list for the other. A fetch is not a monitor event, so
+// this rule does not feed itself.
+func (st *State) onMonitorList(args []json.RawMessage) {
+	var m map[string]json.RawMessage
+	if len(args) == 0 || json.Unmarshal(args[0], &m) != nil {
+		return
+	}
+	st.mu.Lock()
+	objects := make(map[int64]json.RawMessage, len(m))
+	for k, v := range m {
+		if id, err := strconv.ParseInt(k, 10, 64); err == nil && !st.isDeletedLocked(id) {
+			objects[id] = bytes.Clone(v)
+		}
+	}
+	st.objects[Monitors] = objects
+	st.monitorLists++
+	suspect := !st.lastEvent.IsZero() && st.now().Sub(st.lastEvent) < raceWindow
+	f := st.onRacedList
+	st.bumpLocked(Monitors)
+	st.mu.Unlock()
+	if suspect && f != nil {
+		f()
+	}
+}
+
+func (st *State) isDeletedLocked(id int64) bool {
+	_, ok := st.deleted[id]
+	return ok
+}
+
+// monitorEventLocked records an update or a deletion.
+func (st *State) monitorEventLocked() {
+	st.monitorEvents++
+	st.lastEvent = st.now()
+}
+
 func (st *State) onUpdateMonitors(args []json.RawMessage) {
 	var m map[string]json.RawMessage
 	if len(args) == 0 || json.Unmarshal(args[0], &m) != nil {
@@ -292,10 +397,11 @@ func (st *State) onUpdateMonitors(args []json.RawMessage) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	for k, v := range m {
-		if id, err := strconv.ParseInt(k, 10, 64); err == nil {
+		if id, err := strconv.ParseInt(k, 10, 64); err == nil && !st.isDeletedLocked(id) {
 			st.objects[Monitors][id] = bytes.Clone(v)
 		}
 	}
+	st.monitorEventLocked()
 	st.bumpLocked(Monitors)
 }
 
@@ -309,6 +415,16 @@ func (st *State) onDeleteMonitor(args []json.RawMessage) {
 	}
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	now := st.now()
+	if len(st.deleted) >= maxTombstones {
+		for d, at := range st.deleted {
+			if now.Sub(at) > tombstoneTTL {
+				delete(st.deleted, d)
+			}
+		}
+	}
+	st.deleted[id] = now
+	st.monitorEventLocked()
 	delete(st.objects[Monitors], id)
 	delete(st.beats, id)
 	delete(st.avgPing, id)
@@ -342,6 +458,9 @@ func (st *State) onHeartbeatList(args []json.RawMessage) {
 	overwrite := len(args) > 2 && string(args[2]) == "true"
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	if st.isDeletedLocked(id) {
+		return
+	}
 	var cur []json.RawMessage
 	if !overwrite {
 		cur = st.beats[id]
@@ -366,6 +485,9 @@ func (st *State) onHeartbeat(args []json.RawMessage) {
 	}
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	if st.isDeletedLocked(id) {
+		return
+	}
 	st.beats[id] = tail(append(st.beats[id], bytes.Clone(args[0])))
 	st.bumpLocked(Heartbeats)
 }
@@ -389,6 +511,9 @@ func (st *State) onAvgPing(args []json.RawMessage) {
 	}
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	if st.isDeletedLocked(id) {
+		return
+	}
 	st.avgPing[id] = bytes.Clone(args[1])
 	st.bumpLocked(AvgPing)
 }
@@ -409,6 +534,9 @@ func (st *State) onUptime(args []json.RawMessage) {
 	}
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	if st.isDeletedLocked(id) {
+		return
+	}
 	m := st.uptime[id]
 	if m == nil {
 		m = map[string]json.RawMessage{}
@@ -430,6 +558,9 @@ func (st *State) onCertInfo(args []json.RawMessage) {
 	}
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	if st.isDeletedLocked(id) {
+		return
+	}
 	st.certInfo[id] = json.RawMessage(doc)
 	st.bumpLocked(CertInfo)
 }

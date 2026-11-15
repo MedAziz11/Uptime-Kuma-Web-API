@@ -394,12 +394,14 @@ func (s *Server) unpinIncident(ctx context.Context, in *slugParam) (*jsonOutput[
 // Server, database and statistics.
 
 func (s *Server) info(ctx context.Context, _ *struct{}) (*jsonOutput[ServerInfo], error) {
-	if err := s.kuma.Sync(ctx); err != nil {
-		return nil, s.kumaError(ctx, err)
+	st, err := s.state(ctx)
+	if err != nil {
+		return nil, err
 	}
-	info, ok := s.kuma.State().Info()
-	if !ok {
-		return nil, s.kumaError(ctx, kuma.ErrUnavailable)
+	info, snap := st.Info()
+	snap.Synced = snap.Synced && info != nil
+	if err := s.synced(ctx, snap); err != nil {
+		return nil, err
 	}
 	return replyAs[ServerInfo](s, ctx, info)
 }
@@ -413,25 +415,29 @@ func byMonitor[V any](m map[int64]V) map[string]V {
 	return out
 }
 
-func (s *Server) avgPing(ctx context.Context, _ *struct{}) (*jsonOutput[ByMonitor], error) {
-	if err := s.kuma.Sync(ctx); err != nil {
-		return nil, s.kumaError(ctx, err)
+// statistics answers a map by monitor read from State.
+func statistics[V any](s *Server, ctx context.Context, read func(*kuma.State) (map[int64]V, kuma.Snapshot)) (*jsonOutput[ByMonitor], error) {
+	st, err := s.state(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return replyAs[ByMonitor](s, ctx, byMonitor(s.kuma.State().AvgPing()))
+	m, snap := read(st)
+	if err := s.synced(ctx, snap); err != nil {
+		return nil, err
+	}
+	return replyAs[ByMonitor](s, ctx, byMonitor(m))
+}
+
+func (s *Server) avgPing(ctx context.Context, _ *struct{}) (*jsonOutput[ByMonitor], error) {
+	return statistics(s, ctx, (*kuma.State).AvgPing)
 }
 
 func (s *Server) uptime(ctx context.Context, _ *struct{}) (*jsonOutput[ByMonitor], error) {
-	if err := s.kuma.Sync(ctx); err != nil {
-		return nil, s.kumaError(ctx, err)
-	}
-	return replyAs[ByMonitor](s, ctx, byMonitor(s.kuma.State().Uptime()))
+	return statistics(s, ctx, (*kuma.State).Uptime)
 }
 
 func (s *Server) certInfo(ctx context.Context, _ *struct{}) (*jsonOutput[ByMonitor], error) {
-	if err := s.kuma.Sync(ctx); err != nil {
-		return nil, s.kumaError(ctx, err)
-	}
-	return replyAs[ByMonitor](s, ctx, byMonitor(s.kuma.State().CertInfo()))
+	return statistics(s, ctx, (*kuma.State).CertInfo)
 }
 
 func (s *Server) databaseSize(ctx context.Context, _ *struct{}) (*jsonOutput[DatabaseSize], error) {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"sync/atomic"
 	"time"
 )
 
@@ -30,14 +31,67 @@ type Client struct {
 	st      *State
 	timeout time.Duration
 	log     *slog.Logger
+
+	// Verification of suspect monitor lists (see onMonitorList).
+	refreshing  atomic.Int32  // getMonitorList calls in flight
+	verify      chan struct{} // a verification is due; capacity 1
+	verifyDelay time.Duration // debounce before verifying
 }
 
+// Bounds of the monitor list verification.
+const (
+	verifyDelay      = 250 * time.Millisecond
+	maxRefreshRounds = 3
+)
+
 // NewClient returns a Client on s and registers its State's handlers. Call
-// it before the session's first call.
+// it before the session's first call. Its verification goroutine stops
+// with the session (Close).
 func NewClient(s *Session) *Client {
 	st := NewState()
+	c := &Client{s: s, st: st, timeout: s.timeout, log: s.log, verify: make(chan struct{}, 1), verifyDelay: verifyDelay}
+	st.onRacedList = c.racedList
 	st.Register(s)
-	return &Client{s: s, st: st, timeout: s.timeout, log: s.log}
+	s.wg.Add(1)
+	go c.verifier()
+	return c
+}
+
+// racedList is called on the reader goroutine for a monitor list that may
+// be stale. A list our own refresh asked for is checked by that refresh.
+func (c *Client) racedList() {
+	if c.refreshing.Load() > 0 {
+		return
+	}
+	select {
+	case c.verify <- struct{}{}:
+	default: // one is already due
+	}
+}
+
+// verifier fetches the monitor list again after a suspect one, one at a
+// time, a little later so that a burst of changes costs one fetch.
+func (c *Client) verifier() {
+	defer c.s.wg.Done()
+	for {
+		select {
+		case <-c.s.ctx.Done():
+			return
+		case <-c.verify:
+		}
+		t := time.NewTimer(c.verifyDelay)
+		select {
+		case <-c.s.ctx.Done():
+			t.Stop()
+			return
+		case <-t.C:
+		}
+		select {
+		case <-c.verify: // came during the delay: covered by this fetch
+		default:
+		}
+		c.refreshMonitors(c.s.ctx)
+	}
 }
 
 // State returns the state built from Uptime Kuma's pushes. Its contents are
@@ -153,14 +207,26 @@ func (c *Client) DeleteTag(ctx context.Context, id int64) (json.RawMessage, erro
 	return ack, nil
 }
 
-// refreshMonitors asks for the monitor list, which Uptime Kuma pushes.
+// refreshMonitors asks for the monitor list, which Uptime Kuma pushes
+// before it answers. The list is trusted only if it was the one monitor
+// push between the request and the answer: an update or deletion applied
+// meanwhile may be newer than the list, and another list may be a stale
+// one. Then it asks again, a bounded number of times.
 func (c *Client) refreshMonitors(ctx context.Context) {
-	v := c.st.Version(Monitors)
-	if _, err := c.s.CallIdempotent(ctx, "getMonitorList"); err != nil {
-		c.log.WarnContext(ctx, "cannot refresh the monitor list", "err", err)
-		return
+	c.refreshing.Add(1)
+	defer c.refreshing.Add(-1)
+	for range maxRefreshRounds {
+		events, lists := c.st.monitorCounts()
+		if _, err := c.s.CallIdempotent(ctx, "getMonitorList"); err != nil {
+			c.log.WarnContext(ctx, "cannot refresh the monitor list", "err", err)
+			return
+		}
+		events2, lists2 := c.st.monitorCounts()
+		if events2 == events && lists2 == lists+1 {
+			return
+		}
 	}
-	c.awaitPush(ctx, Monitors, v, "getMonitorList")
+	c.log.WarnContext(ctx, "the monitor list kept changing while it was fetched", "rounds", maxRefreshRounds)
 }
 
 // Notifications, proxies and docker hosts: Uptime Kuma pushes the whole

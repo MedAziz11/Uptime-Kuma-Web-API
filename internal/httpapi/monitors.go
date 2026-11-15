@@ -63,10 +63,10 @@ func intToBool(m map[string]any, keys ...string) {
 }
 
 func (s *Server) listMonitors(ctx context.Context, _ *struct{}) (*jsonOutput[Monitors], error) {
-	if err := s.kuma.Sync(ctx); err != nil {
-		return nil, s.kumaError(ctx, err)
+	list, err := s.objects(ctx, kuma.Monitors)
+	if err != nil {
+		return nil, err
 	}
-	list := s.kuma.State().Objects(kuma.Monitors)
 	out := make([]any, len(list))
 	for i, m := range list {
 		out[i] = monitorView(m)
@@ -76,14 +76,7 @@ func (s *Server) listMonitors(ctx context.Context, _ *struct{}) (*jsonOutput[Mon
 
 // monitor returns a monitor from the state, or 2.0's 404.
 func (s *Server) monitor(ctx context.Context, id int64, detail string) (json.RawMessage, error) {
-	if err := s.kuma.Sync(ctx); err != nil {
-		return nil, s.kumaError(ctx, err)
-	}
-	m, ok := s.kuma.State().Object(kuma.Monitors, id)
-	if !ok {
-		return nil, errNotFound(detail)
-	}
-	return m, nil
+	return s.object(ctx, kuma.Monitors, id, detail)
 }
 
 func (s *Server) getMonitor(ctx context.Context, in *monitorIDParam) (*jsonOutput[MonitorResponse], error) {

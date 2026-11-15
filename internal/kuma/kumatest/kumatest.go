@@ -52,6 +52,9 @@ type Server struct {
 	failures      map[string]string
 	noPush        bool
 	calls         map[string]int
+	// beforeListPush runs once in getMonitorList, between reading the list
+	// and pushing it: what Kuma does meanwhile makes the list stale.
+	beforeListPush func()
 }
 
 // New starts a fake. Close it with Close.
@@ -121,6 +124,40 @@ func (k *Server) Beat(monitorID, status int, ping any) {
 	k.push("uptime", monitorID, 24, 1)
 	k.push("uptime", monitorID, 720, 1)
 	k.push("uptime", monitorID, "1y", 1)
+}
+
+// Push emits an event to every logged-in socket, for tests that replay
+// Kuma's pushes in the orders its awaits allow (e.g. a stale list).
+func (k *Server) Push(event string, args ...any) { k.push(event, args...) }
+
+// MonitorList returns the monitor list as Kuma would push it now.
+func (k *Server) MonitorList() map[string]Object {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	return k.objectMap(k.monitors)
+}
+
+// UpdateMonitor sets a field of a monitor and pushes it, as an edit by
+// another client does.
+func (k *Server) UpdateMonitor(id int, field string, value any) {
+	k.mu.Lock()
+	m := k.monitors[id]
+	if m == nil {
+		k.mu.Unlock()
+		return
+	}
+	m[field] = value
+	view := k.view(m)
+	k.mu.Unlock()
+	k.push("updateMonitorIntoList", Object{strconv.Itoa(id): view})
+}
+
+// OnceBeforeMonitorList makes the next getMonitorList run f after it read
+// the list and before it pushes it.
+func (k *Server) OnceBeforeMonitorList(f func()) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.beforeListPush = f
 }
 
 // CertInfo pushes a monitor's certificate info.
@@ -472,7 +509,12 @@ func (k *Server) deleteMonitorTag(ev siotest.Event) (any, func()) {
 func (k *Server) getMonitorList(siotest.Event) (any, func()) {
 	k.mu.Lock()
 	list := k.objectMap(k.monitors)
+	f := k.beforeListPush
+	k.beforeListPush = nil
 	k.mu.Unlock()
+	if f != nil {
+		f()
+	}
 	k.push("monitorList", list)
 	return ok(), nil
 }

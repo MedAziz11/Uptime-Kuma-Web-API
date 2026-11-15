@@ -97,7 +97,7 @@ func TestKumaRoutesLifecycle(t *testing.T) {
 	e.ok(t, "POST", fmt.Sprintf("/monitors/%d/resume", id), "")
 	e.kuma.Beat(id, 1, 25)
 	e.kuma.CertInfo(id, `{"valid":true}`)
-	waitUntil(t, func() bool { return len(e.client.State().CertInfo()) == 1 })
+	waitUntil(t, func() bool { return len(first(e.client.State().CertInfo())) == 1 })
 	beats := get[[]any](t, e.ok(t, "GET", fmt.Sprintf("/monitors/%d/beats?hours=0.5", id), ""), "monitor_beats")
 	if len(beats) != 1 || get[bool](t, beats, 0, "important") != true {
 		t.Fatalf("beats %v", beats)
@@ -580,5 +580,34 @@ func TestReplyEncodingFailure(t *testing.T) {
 	e.srv.log = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	if _, err := replyAs[any](e.srv, context.Background(), make(chan int)); err == nil {
 		t.Fatal("no error")
+	}
+}
+
+func first[T any](v T, _ kuma.Snapshot) T { return v }
+
+// resetAfterSync is a Kuma whose connection drops right after Sync: State
+// is reset before the route reads it.
+type resetAfterSync struct{ *kuma.Client }
+
+func (r resetAfterSync) Sync(ctx context.Context) error {
+	err := r.Client.Sync(ctx)
+	r.State().Reset()
+	return err
+}
+
+// A read of State that is not synced is a 503, never an empty answer.
+func TestReadAfterLostConnectionIs503(t *testing.T) {
+	e := newEnv(t, Options{})
+	id := int(get[float64](t, e.ok(t, "POST", "/monitors", `{"type":"group","name":"g"}`), "monitorID"))
+	e.srv.kuma = resetAfterSync{e.client}
+	for _, c := range []struct{ method, path string }{
+		{"GET", "/monitors"}, {"GET", fmt.Sprintf("/monitors/%d", id)}, {"POST", fmt.Sprintf("/monitors/%d/pause", id)},
+		{"GET", "/notifications"}, {"GET", "/notifications/1"}, {"GET", "/proxies"}, {"GET", "/docker_hosts"},
+		{"GET", "/maintenance"}, {"GET", "/statuspages"}, {"DELETE", "/statuspages/x"},
+		{"GET", "/info"}, {"GET", "/ping"}, {"GET", "/uptime"}, {"GET", "/cert_info"},
+	} {
+		if status, v := e.call(t, c.method, c.path, ""); status != 503 || get[string](t, v, "detail") != "Uptime Kuma is unavailable" {
+			t.Errorf("%s %s: %d %v", c.method, c.path, status, v)
+		}
 	}
 }

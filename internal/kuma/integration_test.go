@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -149,7 +150,7 @@ func TestRealKumaClient(t *testing.T) {
 	if err := c.Sync(ctx); err != nil {
 		t.Fatal(err)
 	}
-	info, ok := c.State().Info()
+	info, ok := infoOf(c.State())
 	var v struct{ Version string }
 	if !ok || json.Unmarshal(info, &v) != nil || !strings.HasPrefix(v.Version, "2.") {
 		t.Fatalf("info %s", info)
@@ -162,11 +163,11 @@ func TestRealKumaClient(t *testing.T) {
 	}
 	id := int64(field[float64](t, must(c.AddMonitor(ctx, m)), "monitorID"))
 	defer func() { _, _ = c.DeleteMonitor(context.Background(), id) }()
-	if _, ok := c.State().Object(Monitors, id); !ok {
+	if _, ok := objectOf(c.State(), Monitors, id); !ok {
 		t.Fatal("added monitor not in State")
 	}
 	must(c.PauseMonitor(ctx, id))
-	cur, _ := c.State().Object(Monitors, id)
+	cur, _ := objectOf(c.State(), Monitors, id)
 	if field[bool](t, cur, "active") {
 		t.Fatal("pause not visible")
 	}
@@ -176,7 +177,7 @@ func TestRealKumaClient(t *testing.T) {
 		t.Fatal(err)
 	}
 	must(c.EditMonitor(ctx, edited))
-	cur, _ = c.State().Object(Monitors, id)
+	cur, _ = objectOf(c.State(), Monitors, id)
 	if field[string](t, cur, "name") != "kuma-it renamed "+suffix {
 		t.Fatalf("edit not visible: %s", cur)
 	}
@@ -185,7 +186,7 @@ func TestRealKumaClient(t *testing.T) {
 	must(c.AddStatusPage(ctx, "Kuma IT", slug))
 	var pageID int64
 	defer func() { _, _ = c.DeleteStatusPage(context.Background(), slug, pageID) }()
-	for _, p := range c.State().Objects(StatusPages) {
+	for _, p := range objectsOf(c.State(), StatusPages) {
 		if field[string](t, p, "slug") == slug {
 			pageID = int64(field[float64](t, p, "id"))
 		}
@@ -196,7 +197,7 @@ func TestRealKumaClient(t *testing.T) {
 	cfg := field[map[string]any](t, must(c.GetStatusPage(ctx, slug)), "config")
 	cfg["title"] = "Kuma IT renamed"
 	must(c.SaveStatusPage(ctx, slug, cfg, "/icon.svg", []any{map[string]any{"name": "g", "monitorList": []any{map[string]any{"id": id}}}}))
-	p, _ := c.State().Object(StatusPages, pageID)
+	p, _ := objectOf(c.State(), StatusPages, pageID)
 	if field[string](t, p, "title") != "Kuma IT renamed" {
 		t.Fatalf("save not visible: %s", p)
 	}
@@ -219,16 +220,134 @@ func TestRealKumaClient(t *testing.T) {
 		"timeRange": []any{}, "cron": "30 3 * * *", "durationMinutes": 60, "timezoneOption": nil})), "maintenanceID"))
 	defer func() { _, _ = c.DeleteMaintenance(context.Background(), mid) }()
 	must(c.PauseMaintenance(ctx, mid))
-	mt, _ := c.State().Object(Maintenances, mid)
+	mt, _ := objectOf(c.State(), Maintenances, mid)
 	if field[bool](t, mt, "active") {
 		t.Fatal("maintenance pause not visible")
 	}
 	must(c.DeleteMaintenance(ctx, mid))
-	if _, ok := c.State().Object(Maintenances, mid); ok {
+	if _, ok := objectOf(c.State(), Maintenances, mid); ok {
 		t.Fatal("deleted maintenance in State")
 	}
 	must(c.DeleteMonitor(ctx, id))
-	if _, ok := c.State().Object(Monitors, id); ok {
+	if _, ok := objectOf(c.State(), Monitors, id); ok {
 		t.Fatal("deleted monitor in State")
+	}
+}
+
+// realKumaClient returns a logged-in Client on the Uptime Kuma of KUMA_URL,
+// or skips.
+func realKumaClient(t *testing.T) *Client {
+	t.Helper()
+	base := os.Getenv("KUMA_URL")
+	if base == "" {
+		t.Skip("KUMA_URL is not set")
+	}
+	user, pass := os.Getenv("KUMA_USERNAME"), os.Getenv("KUMA_PASSWORD")
+	if user == "" {
+		user = "admin"
+	}
+	if pass == "" {
+		pass = "Admin-Pass-12345"
+	}
+	s, err := New(Config{URL: base, Username: user, Password: pass})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	c := NewClient(s)
+	if err := c.Sync(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+func monitorIDs(st *State) string {
+	return ids(objectsOf(st, Monitors))
+}
+
+// TestRealKumaMonitorListConsistency runs concurrent tag deletions (which
+// fetch the monitor list) and monitor creations, pauses, resumes and
+// deletions on a real Uptime Kuma, whose monitor pushes can then arrive
+// out of order, and checks that State ends equal to what a fresh login
+// sees. Everything it creates is deleted again.
+func TestRealKumaMonitorListConsistency(t *testing.T) {
+	c := realKumaClient(t)
+	ctx := context.Background()
+	var mu sync.Mutex
+	var created []int64
+	t.Cleanup(func() {
+		for _, id := range created {
+			_, _ = c.DeleteMonitor(context.Background(), id)
+		}
+	})
+	suffix := strconv.FormatInt(time.Now().UnixNano()%1e9, 10)
+	// A longer list takes Kuma longer to build, which widens the window in
+	// which a list can be overtaken by a later change.
+	for i := range 30 {
+		m, _ := NewMonitor(map[string]any{"type": "group", "name": "kuma-it " + suffix + " idle " + strconv.Itoa(i), "active": false})
+		ack, err := c.AddMonitor(ctx, m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var r struct{ MonitorID int64 }
+		_ = json.Unmarshal(ack, &r)
+		created = append(created, r.MonitorID)
+		if _, err := c.PauseMonitor(ctx, r.MonitorID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var wg sync.WaitGroup
+	errs := make(chan error, 200)
+	for w := range 12 {
+		wg.Go(func() {
+			for range 5 {
+				ack, err := c.AddTag(ctx, map[string]any{"name": "kuma-it " + suffix, "color": "#000000"})
+				if err != nil {
+					errs <- err
+					return
+				}
+				var r struct{ Tag struct{ ID int64 } }
+				_ = json.Unmarshal(ack, &r)
+				if _, err := c.DeleteTag(ctx, r.Tag.ID); err != nil {
+					errs <- err
+				}
+			}
+		})
+		wg.Go(func() {
+			for i := range 5 {
+				m, _ := NewMonitor(map[string]any{"type": "group", "name": "kuma-it " + suffix + " " + strconv.Itoa(w*10+i)})
+				ack, err := c.AddMonitor(ctx, m)
+				if err != nil {
+					errs <- err
+					return
+				}
+				var r struct{ MonitorID int64 }
+				_ = json.Unmarshal(ack, &r)
+				mu.Lock()
+				created = append(created, r.MonitorID)
+				mu.Unlock()
+				for _, step := range []func(context.Context, int64) (json.RawMessage, error){c.PauseMonitor, c.ResumeMonitor, c.DeleteMonitor} {
+					if _, err := step(ctx, r.MonitorID); err != nil {
+						errs <- err
+					}
+				}
+			}
+		})
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Error(err)
+	}
+	// Let a verification of a suspect list finish.
+	time.Sleep(raceWindow + 2*verifyDelay)
+
+	// Read State before the second login: that login makes Uptime Kuma
+	// push a fresh list to every socket of the user, which would hide a
+	// wrong State.
+	got := monitorIDs(c.State())
+	fresh := realKumaClient(t)
+	if want := monitorIDs(fresh.State()); got != want {
+		t.Fatalf("State's monitors %q, a fresh login's %q", got, want)
 	}
 }
