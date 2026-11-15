@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -160,7 +161,131 @@ func (s *Server) routes(maxBody int64) {
 	huma.Register(s.api, op(http.MethodGet, "/users/{username}", "get_user_users__username__get", "Get a user (admin only)", "Users", true), s.getUser)
 	huma.Register(s.api, op(http.MethodDelete, "/users/{username}", "delete_user_users__username__delete", "Delete a user (admin only)", "Users", true), s.deleteUser)
 
+	s.kumaRoutes(op)
 	s.documentValidationErrors()
+}
+
+// operationID is FastAPI's generated operation id: the handler's name, the
+// path and the method, non-word characters replaced by "_".
+func operationID(name, path, method string) string {
+	id := []byte(name + path)
+	for i, c := range id {
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_') {
+			id[i] = '_'
+		}
+	}
+	return string(id) + "_" + strings.ToLower(method)
+}
+
+// kumaRoutes registers the routes that talk to Uptime Kuma: 2.0's, with
+// its paths, operation ids, summaries and tags.
+func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth bool) huma.Operation) {
+	reg := func(method, path, name, summary, tag string) huma.Operation {
+		return op(method, path, operationID(name, path, method), summary, tag, true)
+	}
+	body := func(method, path, name string, t reflect.Type) {
+		s.documentBody(path, method, "application/json", name, t)
+	}
+	const get, post, patch, del = http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete
+
+	// Monitors.
+	huma.Register(s.api, reg(get, "/monitors", "get_monitors", "Get all monitors", "Monitor"), s.listMonitors)
+	huma.Register(s.api, reg(post, "/monitors", "create_monitor", "Create a monitor", "Monitor"), s.createMonitor)
+	s.documentRequiredBody("/monitors", post, "Monitor", reflect.TypeFor[MonitorUpdate](), "type", "name")
+	huma.Register(s.api, reg(get, "/monitors/{monitor_id}", "get_monitor", "Get a monitor", "Monitor"), s.getMonitor)
+	huma.Register(s.api, reg(patch, "/monitors/{monitor_id}", "update_monitor", "Update a monitor", "Monitor"), s.updateMonitor)
+	body(patch, "/monitors/{monitor_id}", "MonitorUpdate", reflect.TypeFor[MonitorUpdate]())
+	huma.Register(s.api, reg(del, "/monitors/{monitor_id}", "delete_monitor", "Delete a monitor", "Monitor"), s.deleteMonitor)
+	huma.Register(s.api, reg(post, "/monitors/{monitor_id}/pause", "pause_monitor", "Pause a monitor", "Monitor"), s.pauseMonitor)
+	huma.Register(s.api, reg(post, "/monitors/{monitor_id}/resume", "resume_monitor", "Resume a monitor", "Monitor"), s.resumeMonitor)
+	huma.Register(s.api, reg(get, "/monitors/{monitor_id}/beats", "monitor_beats", "Get the heartbeats of a monitor for the last N hours", "Monitor"), s.monitorBeats)
+	huma.Register(s.api, reg(post, "/monitors/{monitor_id}/tag", "add_monitor_tag", "Add an existing tag to a monitor", "Monitor"), s.addMonitorTag)
+	body(post, "/monitors/{monitor_id}/tag", "MonitorTag", reflect.TypeFor[MonitorTag]())
+	huma.Register(s.api, reg(del, "/monitors/{monitor_id}/tag", "delete_monitor_tag", "Remove a tag from a monitor", "Monitor"), s.deleteMonitorTag)
+	body(del, "/monitors/{monitor_id}/tag", "MonitorTag", reflect.TypeFor[MonitorTag]())
+
+	// Status pages.
+	huma.Register(s.api, reg(get, "/statuspages", "get_all_status_pages", "Get all status pages", "Status Page"), s.listStatusPages)
+	huma.Register(s.api, reg(post, "/statuspages", "add_status_page", "Add a status page", "Status Page"), s.createStatusPage)
+	body(post, "/statuspages", "AddStatusPageRequest", reflect.TypeFor[AddStatusPageRequest]())
+	huma.Register(s.api, reg(get, "/statuspages/{slug}", "get_status_page", "Get a status page", "Status Page"), s.getStatusPage)
+	huma.Register(s.api, reg(post, "/statuspages/{slug}", "save_status_page", "Save a status page", "Status Page"), s.saveStatusPage)
+	body(post, "/statuspages/{slug}", "SaveStatusPageRequest", reflect.TypeFor[SaveStatusPageRequest]())
+	huma.Register(s.api, reg(del, "/statuspages/{slug}", "delete_status_page", "Delete a status page", "Status Page"), s.deleteStatusPage)
+	huma.Register(s.api, reg(post, "/statuspages/{slug}/incident", "post_incident", "Post an incident", "Status Page"), s.postIncident)
+	body(post, "/statuspages/{slug}/incident", "PostIncidentRequest", reflect.TypeFor[PostIncidentRequest]())
+	huma.Register(s.api, reg(del, "/statuspages/{slug}/incident/unpin", "unpin_incident", "Unpin the incident", "Status Page"), s.unpinIncident)
+
+	// Maintenances.
+	huma.Register(s.api, reg(get, "/maintenance", "get_maintenances", "Get all maintenances", "Maintenance"), s.listMaintenances)
+	huma.Register(s.api, reg(post, "/maintenance", "create_maintenance", "Create a maintenance", "Maintenance"), s.createMaintenance)
+	s.documentRequiredBody("/maintenance", post, "Maintenance", reflect.TypeFor[MaintenanceUpdate](), "title", "strategy")
+	huma.Register(s.api, reg(get, "/maintenance/{maintenance_id}", "get_maintenance", "Get a maintenance", "Maintenance"), s.getMaintenance)
+	huma.Register(s.api, reg(patch, "/maintenance/{maintenance_id}", "update_maintenance", "Update a maintenance", "Maintenance"), s.updateMaintenance)
+	body(patch, "/maintenance/{maintenance_id}", "MaintenanceUpdate", reflect.TypeFor[MaintenanceUpdate]())
+	huma.Register(s.api, reg(del, "/maintenance/{maintenance_id}", "delete_maintenance", "Delete a maintenance", "Maintenance"), s.deleteMaintenance)
+	huma.Register(s.api, reg(post, "/maintenance/{maintenance_id}/pause", "pause_maintenance", "Pause a maintenance", "Maintenance"), s.pauseMaintenance)
+	huma.Register(s.api, reg(post, "/maintenance/{maintenance_id}/resume", "resume_maintenance", "Resume a maintenance", "Maintenance"), s.resumeMaintenance)
+	huma.Register(s.api, reg(get, "/maintenance/{maintenance_id}/monitors", "get_monitor_maintenance", "Get the monitors of a maintenance", "Maintenance"), s.maintenanceMonitors)
+	huma.Register(s.api, reg(post, "/maintenance/{maintenance_id}/monitors", "add_monitor_maintenance", "Set the monitors of a maintenance", "Maintenance"), s.setMaintenanceMonitors)
+	body(post, "/maintenance/{maintenance_id}/monitors", "MonitorMaintenanceList", reflect.TypeFor[[]MonitorMaintenance]())
+
+	// Tags.
+	huma.Register(s.api, reg(get, "/tags", "get_tags", "Get all tags", "Tags"), s.listTags)
+	huma.Register(s.api, reg(post, "/tags", "add_tag", "Add a tag", "Tags"), s.createTag)
+	body(post, "/tags", "Tag", reflect.TypeFor[Tag]())
+	huma.Register(s.api, reg(get, "/tags/{tag_id}", "get_tag", "Get a tag", "Tags"), s.getTag)
+	huma.Register(s.api, reg(patch, "/tags/{tag_id}", "update_tag", "Update a tag", "Tags"), s.updateTag)
+	body(patch, "/tags/{tag_id}", "TagUpdate", reflect.TypeFor[TagUpdate]())
+	huma.Register(s.api, reg(del, "/tags/{tag_id}", "delete_tag", "Delete a tag", "Tags"), s.deleteTag)
+
+	// Notifications.
+	huma.Register(s.api, reg(get, "/notifications", "get_notifications", "Get all notifications", "Notifications"), s.listNotifications)
+	huma.Register(s.api, reg(post, "/notifications", "add_notification", "Add a notification", "Notifications"), s.createNotification)
+	body(post, "/notifications", "NotificationOptions", reflect.TypeFor[NotificationOptions]())
+	huma.Register(s.api, reg(post, "/notifications/test", "test_notification", "Test a notification", "Notifications"), s.testNotification)
+	body(post, "/notifications/test", "NotificationOptions", reflect.TypeFor[NotificationOptions]())
+	huma.Register(s.api, reg(get, "/notifications/{notification_id}", "get_notification", "Get a notification", "Notifications"), s.getNotification)
+	huma.Register(s.api, reg(patch, "/notifications/{notification_id}", "update_notification", "Update a notification", "Notifications"), s.updateNotification)
+	body(patch, "/notifications/{notification_id}", "NotificationOptions", reflect.TypeFor[NotificationOptions]())
+	huma.Register(s.api, reg(del, "/notifications/{notification_id}", "delete_notification", "Delete a notification", "Notifications"), s.deleteNotification)
+
+	// Proxies.
+	huma.Register(s.api, reg(get, "/proxies", "get_proxies", "Get all proxies", "Proxies"), s.listProxies)
+	huma.Register(s.api, reg(post, "/proxies", "add_proxy", "Add a proxy", "Proxies"), s.createProxy)
+	body(post, "/proxies", "ProxyOptions", reflect.TypeFor[ProxyOptions]())
+	huma.Register(s.api, reg(get, "/proxies/{proxy_id}", "get_proxy", "Get a proxy", "Proxies"), s.getProxy)
+	huma.Register(s.api, reg(patch, "/proxies/{proxy_id}", "update_proxy", "Update a proxy", "Proxies"), s.updateProxy)
+	body(patch, "/proxies/{proxy_id}", "ProxyOptions", reflect.TypeFor[ProxyOptions]())
+	huma.Register(s.api, reg(del, "/proxies/{proxy_id}", "delete_proxy", "Delete a proxy", "Proxies"), s.deleteProxy)
+
+	// Docker hosts.
+	huma.Register(s.api, reg(get, "/docker_hosts", "get_docker_hosts", "Get all docker hosts", "Docker Hosts"), s.listDockerHosts)
+	huma.Register(s.api, reg(post, "/docker_hosts", "add_docker_host", "Add a docker host", "Docker Hosts"), s.createDockerHost)
+	body(post, "/docker_hosts", "DockerHostOptions", reflect.TypeFor[DockerHostOptions]())
+	huma.Register(s.api, reg(post, "/docker_hosts/test", "test_docker_host", "Test a docker host", "Docker Hosts"), s.testDockerHost)
+	body(post, "/docker_hosts/test", "DockerHostOptions", reflect.TypeFor[DockerHostOptions]())
+	huma.Register(s.api, reg(get, "/docker_hosts/{docker_host_id}", "get_docker_host", "Get a docker host", "Docker Hosts"), s.getDockerHost)
+	huma.Register(s.api, reg(patch, "/docker_hosts/{docker_host_id}", "update_docker_host", "Update a docker host", "Docker Hosts"), s.updateDockerHost)
+	body(patch, "/docker_hosts/{docker_host_id}", "DockerHostOptions", reflect.TypeFor[DockerHostOptions]())
+	huma.Register(s.api, reg(del, "/docker_hosts/{docker_host_id}", "delete_docker_host", "Delete a docker host", "Docker Hosts"), s.deleteDockerHost)
+
+	// Settings, database, server and statistics.
+	backup := reg(post, "/settings/upload_backup", "upload_backup", "Import a backup", "Settings")
+	backup.Deprecated = true
+	backup.Description = "Removed: Uptime Kuma 2.x cannot import backups. Always answers 410 Gone."
+	huma.Register(s.api, backup, s.uploadBackup)
+	o := operations(s.api.OpenAPI().Paths["/settings/upload_backup"])[post]
+	clear(o.Responses)
+	o.Responses["410"] = &huma.Response{Description: "Gone", Content: map[string]*huma.MediaType{
+		"application/json": {Schema: s.api.OpenAPI().Components.Schemas.Schema(reflect.TypeFor[HTTPError](), true, "HTTPError")},
+	}}
+	huma.Register(s.api, reg(get, "/database/size", "get_db_size", "Get the Uptime Kuma database size", "DataBase"), s.databaseSize)
+	huma.Register(s.api, reg(post, "/database/shrink", "shrink_db", "Shrink the Uptime Kuma database", "DataBase"), s.shrinkDatabase)
+	huma.Register(s.api, reg(get, "/cert_info", "get_cert_info", "Get certificate info", "Certification Info"), s.certInfo)
+	huma.Register(s.api, reg(get, "/info", "get_info", "Get server info", "Informations"), s.info)
+	huma.Register(s.api, reg(get, "/ping", "get_avg_ping", "Get the average ping of each monitor", "Ping Average"), s.avgPing)
+	huma.Register(s.api, reg(get, "/uptime", "get_uptime", "Get the uptime of each monitor", "Uptime"), s.uptime)
 }
 
 // redocPage is FastAPI's ReDoc page (get_redoc_html), which 2.0 serves at
@@ -208,6 +333,20 @@ func (s *Server) documentBody(path, method, contentType, name string, t reflect.
 	o := operations(s.api.OpenAPI().Paths[path])[method]
 	o.RequestBody = &huma.RequestBody{Content: map[string]*huma.MediaType{
 		contentType: {Schema: &huma.Schema{Ref: "#/components/schemas/" + name}},
+	}}
+}
+
+// documentRequiredBody documents a body with the schema of t in which the
+// named fields are required, registered under name.
+func (s *Server) documentRequiredBody(path, method, name string, t reflect.Type, required ...string) {
+	registry := s.api.OpenAPI().Components.Schemas
+	base := registry.Schema(t, false, name)
+	schema := *base
+	schema.Required = append(slices.Clone(base.Required), required...)
+	registry.Map()[name] = &schema
+	o := operations(s.api.OpenAPI().Paths[path])[method]
+	o.RequestBody = &huma.RequestBody{Required: true, Content: map[string]*huma.MediaType{
+		"application/json": {Schema: &huma.Schema{Ref: "#/components/schemas/" + name}},
 	}}
 }
 

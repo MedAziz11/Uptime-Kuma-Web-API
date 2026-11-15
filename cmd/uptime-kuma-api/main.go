@@ -28,7 +28,7 @@ import (
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/version"
 )
 
-var _ httpapi.Kuma = (*kuma.Session)(nil)
+var _ httpapi.Kuma = (*kuma.Client)(nil)
 
 // Exit statuses.
 const (
@@ -140,7 +140,7 @@ func serve(ctx context.Context, cfg *config.Config, log *slog.Logger, h hooks) e
 		Users:       st,
 		Passwords:   passwords,
 		Tokens:      tokens,
-		Kuma:        session,
+		Kuma:        kuma.NewClient(session),
 		CORSOrigins: cfg.CORSOrigins,
 		Logger:      log,
 		Version:     version.Version,

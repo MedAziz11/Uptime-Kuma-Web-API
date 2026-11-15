@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -97,12 +99,43 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_, _ = w.Write(body)
 }
 
-// errorTransformer turns the errors huma raises itself (for example a body
-// over the size limit) into the {"detail": "..."} format.
+// errorTransformer turns the errors huma raises itself into 2.0's format:
+// {"detail": "..."} (for example a body over the size limit), and FastAPI's
+// list of validation errors for invalid path and query parameters.
 func errorTransformer(ctx huma.Context, _ string, v any) (any, error) {
 	if m, ok := v.(*huma.ErrorModel); ok {
 		ctx.SetHeader("Content-Type", "application/json")
+		if m.Status == http.StatusUnprocessableEntity && len(m.Errors) > 0 {
+			return errValidation(paramIssues(m.Errors)), nil
+		}
 		return &apiError{status: m.Status, Detail: m.Detail}, nil
 	}
 	return v, nil
+}
+
+// paramIssues maps huma's parameter errors (huma v2.40's messages) to
+// pydantic's error types: "path.monitor_id" becomes ["path", "monitor_id"].
+func paramIssues(errs []*huma.ErrorDetail) []validationIssue {
+	issues := make([]validationIssue, 0, len(errs))
+	for _, e := range errs {
+		var loc []any
+		for _, part := range strings.SplitN(e.Location, ".", 2) {
+			loc = append(loc, part)
+		}
+		issue := validationIssue{Type: "value_error", Loc: loc, Msg: e.Message, Input: e.Value}
+		switch {
+		case e.Message == "invalid integer":
+			issue.Type, issue.Msg = "int_parsing", "Input should be a valid integer, unable to parse string as an integer"
+		case e.Message == "invalid float":
+			issue.Type, issue.Msg = "float_parsing", "Input should be a valid number, unable to parse string as a number"
+		case strings.HasPrefix(e.Message, "expected number > "):
+			bound := strings.TrimPrefix(e.Message, "expected number > ")
+			issue.Type, issue.Msg = "greater_than", "Input should be greater than "+bound
+			if f, err := strconv.ParseFloat(bound, 64); err == nil {
+				issue.Ctx = map[string]any{"gt": f}
+			}
+		}
+		issues = append(issues, issue)
+	}
+	return issues
 }

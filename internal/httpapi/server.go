@@ -24,14 +24,6 @@ import (
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/store"
 )
 
-// Kuma is what the routes need from Uptime Kuma; *kuma.Session implements
-// it. No route of this phase calls it: /health and the user routes work
-// without Uptime Kuma.
-type Kuma interface {
-	Call(ctx context.Context, event string, args ...any) (json.RawMessage, error)
-	CallIdempotent(ctx context.Context, event string, args ...any) (json.RawMessage, error)
-}
-
 // Users is the user store; *store.Store implements it. User and Users must
 // be cheap: they run on every authenticated request.
 type Users interface {
@@ -48,7 +40,8 @@ const AdminUsername = "admin"
 // DefaultMaxBodyBytes bounds request bodies unless Options says otherwise.
 const DefaultMaxBodyBytes = 1 << 20
 
-// Options configures a Server. Users, Passwords and Tokens are required.
+// Options configures a Server. Users, Passwords, Tokens and Kuma are
+// required.
 type Options struct {
 	Users        Users
 	Passwords    *auth.Passwords
@@ -69,6 +62,9 @@ type Server struct {
 	log       *slog.Logger
 	version   string
 
+	// notificationOptions are the option names a notification may have.
+	notificationOptions map[string]bool
+
 	mux     *http.ServeMux
 	api     huma.API
 	handler http.Handler
@@ -76,8 +72,8 @@ type Server struct {
 
 // New builds the API.
 func New(opts Options) (*Server, error) {
-	if opts.Users == nil || opts.Passwords == nil || opts.Tokens == nil {
-		return nil, errors.New("httpapi: Users, Passwords and Tokens are required")
+	if opts.Users == nil || opts.Passwords == nil || opts.Tokens == nil || opts.Kuma == nil {
+		return nil, errors.New("httpapi: Users, Passwords, Tokens and Kuma are required")
 	}
 	if opts.MaxBodyBytes <= 0 {
 		opts.MaxBodyBytes = DefaultMaxBodyBytes
@@ -93,6 +89,8 @@ func New(opts Options) (*Server, error) {
 		log:       opts.Logger,
 		version:   opts.Version,
 		mux:       http.NewServeMux(),
+
+		notificationOptions: notificationOptions(),
 	}
 	s.api = humago.New(s.mux, s.humaConfig())
 	s.routes(opts.MaxBodyBytes)

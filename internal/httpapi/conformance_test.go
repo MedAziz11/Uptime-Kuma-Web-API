@@ -17,6 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/auth"
+	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/kuma"
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/store"
 )
 
@@ -168,7 +169,12 @@ func conformanceServer(t *testing.T, doc v2Responses, origins []string, database
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv, err := New(Options{Users: st, Passwords: pw, Tokens: tokens, CORSOrigins: origins, Version: "2.0.0"})
+	session, err := kuma.New(kuma.Config{URL: "http://127.0.0.1:9"}) // never called
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { session.Close() })
+	srv, err := New(Options{Users: st, Passwords: pw, Tokens: tokens, Kuma: kuma.NewClient(session), CORSOrigins: origins, Version: "2.0.0"})
 	if err != nil {
 		t.Fatal(err)
 	}

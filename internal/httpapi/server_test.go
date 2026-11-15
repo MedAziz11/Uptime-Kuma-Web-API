@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -21,35 +22,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/auth"
+	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/kuma"
+	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/kuma/kumatest"
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/store"
 )
 
 const testKey = "server-test-key-server-test-key"
 
-// fakeKuma fails the test if a route calls Uptime Kuma.
-type fakeKuma struct {
-	mu    sync.Mutex
-	calls []string
-}
-
-func (k *fakeKuma) Call(_ context.Context, event string, _ ...any) (json.RawMessage, error) {
-	k.mu.Lock()
-	defer k.mu.Unlock()
-	k.calls = append(k.calls, event)
-	return nil, errors.New("fake")
-}
-
-func (k *fakeKuma) CallIdempotent(ctx context.Context, event string, args ...any) (json.RawMessage, error) {
-	return k.Call(ctx, event, args...)
-}
-
 type testEnv struct {
-	srv   *Server
-	store *store.Store
-	kuma  *fakeKuma
-	logs  *bytes.Buffer
-	pw    *auth.Passwords
-	tk    *auth.Tokens
+	srv    *Server
+	store  *store.Store
+	kuma   *kumatest.Server
+	client *kuma.Client
+	logs   *bytes.Buffer
+	pw     *auth.Passwords
+	tk     *auth.Tokens
 }
 
 func newEnv(t *testing.T, opts Options) *testEnv {
@@ -64,11 +51,18 @@ func newEnv(t *testing.T, opts Options) *testEnv {
 		t.Fatal(err)
 	}
 	tk, _ := auth.NewTokens(testKey, time.Hour)
-	env := &testEnv{store: st, kuma: &fakeKuma{}, logs: &bytes.Buffer{}, pw: pw, tk: tk}
+	k := kumatest.New()
+	t.Cleanup(k.Close)
+	session, err := kuma.New(kuma.Config{URL: k.URL, Username: kumatest.Username, Password: kumatest.Password, Timeout: 5 * time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { session.Close() })
+	env := &testEnv{store: st, kuma: k, client: kuma.NewClient(session), logs: &bytes.Buffer{}, pw: pw, tk: tk}
 	if opts.Users == nil {
 		opts.Users = st
 	}
-	opts.Passwords, opts.Tokens, opts.Kuma = pw, tk, env.kuma
+	opts.Passwords, opts.Tokens, opts.Kuma = pw, tk, env.client
 	opts.Logger = slog.New(slog.NewJSONHandler(syncWriter{mu: &sync.Mutex{}, w: env.logs}, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	opts.Version = "3.0.0-test"
 	env.srv, err = New(opts)
@@ -167,6 +161,62 @@ func TestOpenAPIDocument(t *testing.T) {
 		"GET /users/me":            "get_me_users_me_get",
 		"GET /users/{username}":    "get_user_users__username__get",
 		"DELETE /users/{username}": "delete_user_users__username__delete",
+
+		"GET /monitors":                               "get_monitors_monitors_get",
+		"POST /monitors":                              "create_monitor_monitors_post",
+		"GET /monitors/{monitor_id}":                  "get_monitor_monitors__monitor_id__get",
+		"PATCH /monitors/{monitor_id}":                "update_monitor_monitors__monitor_id__patch",
+		"DELETE /monitors/{monitor_id}":               "delete_monitor_monitors__monitor_id__delete",
+		"POST /monitors/{monitor_id}/pause":           "pause_monitor_monitors__monitor_id__pause_post",
+		"POST /monitors/{monitor_id}/resume":          "resume_monitor_monitors__monitor_id__resume_post",
+		"GET /monitors/{monitor_id}/beats":            "monitor_beats_monitors__monitor_id__beats_get",
+		"POST /monitors/{monitor_id}/tag":             "add_monitor_tag_monitors__monitor_id__tag_post",
+		"DELETE /monitors/{monitor_id}/tag":           "delete_monitor_tag_monitors__monitor_id__tag_delete",
+		"GET /statuspages":                            "get_all_status_pages_statuspages_get",
+		"POST /statuspages":                           "add_status_page_statuspages_post",
+		"GET /statuspages/{slug}":                     "get_status_page_statuspages__slug__get",
+		"POST /statuspages/{slug}":                    "save_status_page_statuspages__slug__post",
+		"DELETE /statuspages/{slug}":                  "delete_status_page_statuspages__slug__delete",
+		"POST /statuspages/{slug}/incident":           "post_incident_statuspages__slug__incident_post",
+		"DELETE /statuspages/{slug}/incident/unpin":   "unpin_incident_statuspages__slug__incident_unpin_delete",
+		"GET /maintenance":                            "get_maintenances_maintenance_get",
+		"POST /maintenance":                           "create_maintenance_maintenance_post",
+		"GET /maintenance/{maintenance_id}":           "get_maintenance_maintenance__maintenance_id__get",
+		"PATCH /maintenance/{maintenance_id}":         "update_maintenance_maintenance__maintenance_id__patch",
+		"DELETE /maintenance/{maintenance_id}":        "delete_maintenance_maintenance__maintenance_id__delete",
+		"POST /maintenance/{maintenance_id}/pause":    "pause_maintenance_maintenance__maintenance_id__pause_post",
+		"POST /maintenance/{maintenance_id}/resume":   "resume_maintenance_maintenance__maintenance_id__resume_post",
+		"GET /maintenance/{maintenance_id}/monitors":  "get_monitor_maintenance_maintenance__maintenance_id__monitors_get",
+		"POST /maintenance/{maintenance_id}/monitors": "add_monitor_maintenance_maintenance__maintenance_id__monitors_post",
+		"GET /tags":                               "get_tags_tags_get",
+		"POST /tags":                              "add_tag_tags_post",
+		"GET /tags/{tag_id}":                      "get_tag_tags__tag_id__get",
+		"PATCH /tags/{tag_id}":                    "update_tag_tags__tag_id__patch",
+		"DELETE /tags/{tag_id}":                   "delete_tag_tags__tag_id__delete",
+		"GET /notifications":                      "get_notifications_notifications_get",
+		"POST /notifications":                     "add_notification_notifications_post",
+		"POST /notifications/test":                "test_notification_notifications_test_post",
+		"GET /notifications/{notification_id}":    "get_notification_notifications__notification_id__get",
+		"PATCH /notifications/{notification_id}":  "update_notification_notifications__notification_id__patch",
+		"DELETE /notifications/{notification_id}": "delete_notification_notifications__notification_id__delete",
+		"GET /proxies":                            "get_proxies_proxies_get",
+		"POST /proxies":                           "add_proxy_proxies_post",
+		"GET /proxies/{proxy_id}":                 "get_proxy_proxies__proxy_id__get",
+		"PATCH /proxies/{proxy_id}":               "update_proxy_proxies__proxy_id__patch",
+		"DELETE /proxies/{proxy_id}":              "delete_proxy_proxies__proxy_id__delete",
+		"GET /docker_hosts":                       "get_docker_hosts_docker_hosts_get",
+		"POST /docker_hosts":                      "add_docker_host_docker_hosts_post",
+		"POST /docker_hosts/test":                 "test_docker_host_docker_hosts_test_post",
+		"GET /docker_hosts/{docker_host_id}":      "get_docker_host_docker_hosts__docker_host_id__get",
+		"PATCH /docker_hosts/{docker_host_id}":    "update_docker_host_docker_hosts__docker_host_id__patch",
+		"DELETE /docker_hosts/{docker_host_id}":   "delete_docker_host_docker_hosts__docker_host_id__delete",
+		"POST /settings/upload_backup":            "upload_backup_settings_upload_backup_post",
+		"GET /database/size":                      "get_db_size_database_size_get",
+		"POST /database/shrink":                   "shrink_db_database_shrink_post",
+		"GET /cert_info":                          "get_cert_info_cert_info_get",
+		"GET /info":                               "get_info_info_get",
+		"GET /ping":                               "get_avg_ping_ping_get",
+		"GET /uptime":                             "get_uptime_uptime_get",
 	}
 	public := map[string]bool{"GET /health": true, "POST /login/access-token": true}
 	n := 0
@@ -184,9 +234,13 @@ func TestOpenAPIDocument(t *testing.T) {
 			if secured == public[key] {
 				t.Errorf("%s: security declared %v", key, secured)
 			}
+			// Every operation documents its answer.
+			if !hasResponseSchema(op) {
+				t.Errorf("%s: no response schema", key)
+			}
 			// Every protected operation answers 401 without a token.
 			if !public[key] {
-				p := strings.ReplaceAll(path, "{username}", "x")
+				p := regexp.MustCompile(`\{[a-z_]+\}`).ReplaceAllString(path, "1")
 				if res := env.do(t, strings.ToUpper(method), p, "", "application/json", "{}"); res.StatusCode != 401 {
 					t.Errorf("%s without token: %d", key, res.StatusCode)
 				}
@@ -221,9 +275,27 @@ func TestOpenAPIDocument(t *testing.T) {
 	if res := env.do(t, "GET", "/schemas/Token.json", "", "", ""); res.StatusCode != 401 {
 		t.Fatalf("/schemas is not served: %d", res.StatusCode)
 	}
-	if len(env.kuma.calls) != 0 {
-		t.Fatalf("Uptime Kuma called: %v", env.kuma.calls)
+	if n := env.kuma.Calls("login"); n != 0 {
+		t.Fatalf("Uptime Kuma called: %d logins", n)
 	}
+}
+
+// hasResponseSchema reports whether an operation documents the body of its
+// success answer.
+func hasResponseSchema(op map[string]any) bool {
+	responses, _ := op["responses"].(map[string]any)
+	for code, r := range responses {
+		if code == "default" || code == "422" {
+			continue
+		}
+		content, _ := r.(map[string]any)["content"].(map[string]any)
+		for _, mt := range content {
+			if schema, _ := mt.(map[string]any)["schema"].(map[string]any); len(schema) > 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func TestResponsesHaveNoSchemaLinks(t *testing.T) {
@@ -547,7 +619,7 @@ func TestUpgradeFrom2_0(t *testing.T) {
 	}
 	pw, _ := auth.NewPasswords(bcrypt.MinCost)
 	tk, _ := auth.NewTokens(key, time.Hour)
-	srv, err := New(Options{Users: st, Passwords: pw, Tokens: tk})
+	srv, err := New(Options{Users: st, Passwords: pw, Tokens: tk, Kuma: newEnv(t, Options{}).client})
 	if err != nil {
 		t.Fatal(err)
 	}
