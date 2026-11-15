@@ -73,7 +73,9 @@ func run(ctx context.Context, args []string, lookup config.LookupFunc, stdout, s
 		slog.New(slog.NewJSONHandler(stderr, nil)).Error("cannot start: "+err.Error(), "version", version.Version)
 		return exitConfig
 	}
-	log := slog.New(slog.NewJSONHandler(stderr, &slog.HandlerOptions{Level: cfg.LogLevel}))
+	lw := newLogWriter(stderr)
+	defer lw.Close()
+	log := slog.New(slog.NewJSONHandler(lw, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	if err := serve(ctx, cfg, log, h); err != nil {
 		log.Error("uptime-kuma-api failed: "+err.Error(), "version", version.Version)
 		return exitFailed
