@@ -167,7 +167,7 @@ type AddStatusPageRequest struct {
 type SaveStatusPageRequest struct {
 	Title                 *string          `json:"title,omitempty"`
 	Description           *string          `json:"description,omitempty"`
-	Theme                 *string          `json:"theme,omitempty" enum:"auto,light,dark"`
+	Theme                 *string          `json:"theme,omitempty" doc:"auto (default), light or dark."`
 	Published             *bool            `json:"published,omitempty"`
 	ShowTags              *bool            `json:"showTags,omitempty"`
 	DomainNameList        []string         `json:"domainNameList,omitempty"`

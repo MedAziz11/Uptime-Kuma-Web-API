@@ -37,6 +37,8 @@ type testEnv struct {
 	logs   *bytes.Buffer
 	pw     *auth.Passwords
 	tk     *auth.Tokens
+
+	adminToken string // set by call
 }
 
 func newEnv(t *testing.T, opts Options) *testEnv {

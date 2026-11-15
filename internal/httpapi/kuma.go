@@ -123,7 +123,7 @@ var (
 	notFoundRaw = regexp.MustCompile(`(?i)Cannot read properties of null|No slug\?|You do not own this|FOREIGN KEY constraint failed`)
 	notFound    = regexp.MustCompile(`(?i)does not exist|not found|no .*found`)
 	// Other raw errors are internal details: logged, never returned.
-	rawError = regexp.MustCompile(`(?i)Cannot read propert|is not a function|is not defined|is not iterable|SQLITE_|constraint failed|Unexpected token|ECONNREFUSED|ENOENT`)
+	rawError = regexp.MustCompile(`(?i)Cannot read propert|is not a function|is not defined|is not iterable|SQLITE_|constraint failed|Unexpected token`)
 )
 
 // kumaError maps an error of a call to Uptime Kuma to the answer 2.0 gave,

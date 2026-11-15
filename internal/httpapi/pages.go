@@ -335,8 +335,13 @@ func (s *Server) saveStatusPage(ctx context.Context, in *slugBodyInput) (*jsonOu
 			config[k] = v
 		}
 	}
-	if t, _ := config["theme"].(string); t == "" {
+	// 2.0's _build_status_page_data.
+	switch t, _ := config["theme"].(string); t {
+	case "":
 		config["theme"] = "auto"
+	case "auto", "light", "dark":
+	default:
+		return nil, newError(http.StatusUnprocessableEntity, "theme must be auto, light or dark")
 	}
 	if icon == "" {
 		icon = "/icon.svg"

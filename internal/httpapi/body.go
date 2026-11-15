@@ -149,9 +149,9 @@ func typeOf(t reflect.Type) valueType {
 		vt.kind = kindBool
 	case reflect.Slice:
 		elem := typeOf(t.Elem())
-		vt.kind, vt.elem = kindList, &elem
+		vt.kind, vt.elem, vt.nullable = kindList, &elem, true // as nil
 	case reflect.Map:
-		vt.kind = kindDict
+		vt.kind, vt.nullable = kindDict, true
 	case reflect.Struct:
 		vt.kind, vt.model = kindModel, modelOf(t)
 	default:
@@ -225,7 +225,12 @@ func (t *valueType) check(v any, loc []any, issues *[]validationIssue) {
 		*issues = append(*issues, validationIssue{Type: typ, Loc: loc, Msg: msg, Input: v, Ctx: ctx})
 	}
 	if v == nil {
-		if !t.nullable && t.kind != kindAny {
+		switch {
+		case t.nullable || t.kind == kindAny:
+		case len(t.enum) > 0:
+			expected := enumText(t.enum)
+			add("enum", "Input should be "+expected, map[string]any{"expected": expected})
+		default:
 			add(nullType(t.kind), nullMessage(t.kind), nil)
 		}
 		return
