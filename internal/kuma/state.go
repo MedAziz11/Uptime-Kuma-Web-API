@@ -342,9 +342,9 @@ func (st *State) onHeartbeatList(args []json.RawMessage) {
 	overwrite := len(args) > 2 && string(args[2]) == "true"
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	cur := st.beats[id]
-	if overwrite || cur == nil {
-		cur = nil
+	var cur []json.RawMessage
+	if !overwrite {
+		cur = st.beats[id]
 	}
 	for _, b := range beats {
 		cur = append(cur, bytes.Clone(b))

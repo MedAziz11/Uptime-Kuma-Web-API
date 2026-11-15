@@ -99,3 +99,37 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 | 422 for a malformed JSON body | Python's message and character position | Go's message and byte offset | Same `type` (`json_invalid`) and shape |
 | Order of keys in the `input` echoed by a 422 | request order | sorted | `encoding/json` maps |
 | JSON nested deeper than Python's recursion limit | 400 | 422 `json_invalid` (beyond Go's limit of 10000) | |
+| Kuma's success messages | the translation key Kuma 2.x sends (`successAdded`, with `msgi18n`) | the English text of Kuma's UI (`Added Successfully.`), no `msgi18n` | What 2.0's clients got from Kuma 1.x |
+| Raw JavaScript or SQL error from Kuma | 400 with the raw text | 400 `Uptime Kuma could not process the request`; the text is logged with the request id | Internal details are not returned |
+| 503 details | Python exception texts | `Uptime Kuma is unavailable`, `Uptime Kuma rejected the login`, or the 2FA explanation | |
+| Texts of 2.0's argument checks (422 with a text detail) | Python's `TypeError`/`ValueError` texts | similar English texts, e.g. `missing 2 required argument: 'protocol', 'port'` | Same status and shape |
+| Lax coercion in bodies (`"5"` for an integer, `0`/`1` for a boolean) | accepted by pydantic | 422 (`int_parsing`, `bool_type`, ...) | Fields are checked for their JSON type only |
+| `timeout` of a monitor | integer | number | Kuma 2.x accepts decimals |
+| Fields a body does not document | monitors: passed on; maintenances, status pages: dropped; proxies, docker hosts: 422 | passed on to Kuma (architecture §6) | |
+| Notification options | checked against uptime-kuma-api 1.2.1's list | checked against the options of Kuma 2.5.11's providers and UI (unknown → 422, kept for the acceptance suite) | |
+| Documented fields of notifications, proxies, docker hosts | not type-checked | type-checked (422) | §6 |
+| `PATCH /notifications/{id}` changing `type` | dropped the old provider's options | keeps them | No per-provider option list for 2.x |
+| `POST /monitors` defaults | uptime-kuma-api's (`maxretries` 1, ...) | Kuma 2.x UI's (`defaults.go`: `maxretries` 0, `timeout` 48, per-type ports, ...) | 2.0 could not create monitors on 2.x at all |
+| Monitor types, `accepted_statuscodes` | 1.23's types; codes 100–999 | also 2.x's types (`websocket-upgrade`, `snmp`, ...) and codes 1000–4999 (WebSocket close codes) | |
+| `GET /ping`, `/uptime`, `/cert_info` | waited up to 2 s for pushes; kept deleted monitors | the pushed state at once; deleted monitors removed | |
+| `GET /monitors/{id}` | `getMonitor` | the pushed monitor list (same fields; `path` and `pathName` filled in) | |
+| `GET /statuspages/{slug}` `incident` | (failed on 2.x: Kuma now lists `incidents`) | the newest pinned incident, or null | |
+| `POST /statuspages/{slug}` | (failed on 2.x) | merges into Kuma's current configuration; `googleAnalyticsId` sets `analyticsId` and `analyticsType: google`; an invalid theme is 422 | |
+| Incident routes | re-saved the page to clear Kuma's response cache | read the public page with `Cache-Control: no-cache` | No extra write |
+| `POST /settings/upload_backup` | 504 on 2.x (422 for a bad `import_handle`) | always 410 Gone | Kuma 2.x removed backup import |
+| `POST /monitors/{id}/tag` with an unknown tag | 404 `Not found` from Kuma's foreign key error | 404 `tag does not exist`, checked first | |
+| `POST /maintenance/{id}/monitors`, `DELETE /statuspages/{slug}/incident/unpin` with an unknown id or slug | Kuma's error or success | 404, checked first | Kuma would store links to nothing or answer success |
+| `ctx` of a query parameter's `greater_than` | `{"gt": 0.0}` | `{"gt": 0}` | Same number in JSON |
+
+## How 3.0 reads and writes (phase 3)
+
+- `kuma.State` keeps what Kuma pushes; reads of pushed lists call `Client.Sync` (wait for the
+  login, 503 while Kuma is unreachable) and then read `State`. `State` is reset before each
+  connection; the login pushes everything again.
+- A write returns once a following read reflects it: for a list Kuma pushes after the command,
+  the write waits (bounded by `KUMA_TIMEOUT`) until the list's version grows; status pages are
+  read back with `getStatusPage`; after a tag edit or delete the monitor list is fetched again
+  (`getMonitorList`), since monitors carry their tags.
+- `GET /api/status-page/{slug}` is cached by Kuma for minutes and the cache is not cleared by
+  `postIncident` or `unpinIncident`; Kuma's cache honours `Cache-Control: no-cache`, which the API
+  sends.
