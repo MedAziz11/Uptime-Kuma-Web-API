@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/rand/v2"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -91,6 +93,7 @@ type Session struct {
 
 	handlersMu sync.RWMutex
 	handlers   map[string]Handler
+	onReset    func()
 
 	mu      sync.Mutex
 	started bool
@@ -157,6 +160,82 @@ func (s *Session) Handle(name string, h Handler) {
 		return
 	}
 	s.handlers[name] = h
+}
+
+// OnReset registers f to run before each connection attempt, once every
+// event of the previous connection was dispatched and before any event of
+// the next one is: state built from pushes is dropped there, since the next
+// login pushes it again. f runs on the session's own goroutine and must
+// return quickly. Register it before the first Call.
+func (s *Session) OnReset(f func()) {
+	s.handlersMu.Lock()
+	defer s.handlersMu.Unlock()
+	s.onReset = f
+}
+
+func (s *Session) reset() {
+	s.handlersMu.RLock()
+	f := s.onReset
+	s.handlersMu.RUnlock()
+	if f != nil {
+		f()
+	}
+}
+
+// Connect waits until the session is connected and logged in, connecting
+// on first use. When it returns nil, every event Uptime Kuma pushed during
+// the login was dispatched. It fails like Call: ErrUnavailable when Uptime
+// Kuma cannot be reached (at once while the session backs off), bounded by
+// ctx and the timeout.
+func (s *Session) Connect(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+	_, err := s.ready(ctx)
+	return err
+}
+
+// maxHTTPBody bounds the answers read by get.
+const maxHTTPBody = 16 << 20
+
+// errHTTPNotFound is get's error for a 404 answer.
+var errHTTPNotFound = errors.New("kuma: not found")
+
+// get fetches path (e.g. "/api/status-page/x") from Uptime Kuma's HTTP API,
+// bypassing its response cache, bounded by ctx and the timeout. A 404
+// answer is errHTTPNotFound.
+func (s *Session) get(ctx context.Context, path string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimSuffix(s.url, "/")+path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("kuma: GET %s: %w", path, err)
+	}
+	// Uptime Kuma caches these answers for minutes and only clears the cache
+	// on some writes; no-cache makes it answer from its database.
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Accept", "application/json")
+	client := s.client
+	if client == nil {
+		client = http.DefaultClient
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("%w: GET %s: %w", ErrTimeout, path, context.DeadlineExceeded)
+		}
+		return nil, fmt.Errorf("%w: GET %s: %w", ErrUnavailable, path, err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(res.Body, maxHTTPBody))
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("%w: GET %s: %w", ErrUnavailable, path, err)
+	case res.StatusCode == http.StatusNotFound:
+		return nil, fmt.Errorf("GET %s: %w", path, errHTTPNotFound)
+	case res.StatusCode != http.StatusOK:
+		return nil, fmt.Errorf("%w: GET %s: HTTP %d", ErrUnavailable, path, res.StatusCode)
+	}
+	return body, nil
 }
 
 func (s *Session) dispatch(name string, args []json.RawMessage) {
@@ -428,6 +507,7 @@ func jitter(d, limit time.Duration) time.Duration {
 // in. The timeout bounds the dial and the wait together, then each login
 // step.
 func (s *Session) connect() (*sio.Conn, error) {
+	s.reset()
 	ctx, cancel := context.WithTimeout(s.ctx, s.timeout)
 	defer cancel()
 	ready := make(chan string, 1)

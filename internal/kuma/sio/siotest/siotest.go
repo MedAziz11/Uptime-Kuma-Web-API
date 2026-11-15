@@ -48,6 +48,8 @@ type Options struct {
 	OnEvent func(s *Socket, ev Event)
 	// OnPong runs for each pong received, on the socket's reader goroutine.
 	OnPong func(s *Socket)
+	// HTTP, when set, serves the requests for paths other than /socket.io/.
+	HTTP http.Handler
 }
 
 // Server is a test Socket.IO server. Close it with Close.
@@ -119,6 +121,10 @@ func (s *Server) DisconnectAll() {
 }
 
 func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/socket.io/" && s.opts.HTTP != nil {
+		s.opts.HTTP.ServeHTTP(w, r)
+		return
+	}
 	if r.URL.Path != "/socket.io/" || r.URL.Query().Get("EIO") != "4" || r.URL.Query().Get("transport") != "websocket" {
 		http.Error(w, "bad endpoint", http.StatusBadRequest)
 		return
