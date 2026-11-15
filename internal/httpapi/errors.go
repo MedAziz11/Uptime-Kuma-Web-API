@@ -59,6 +59,13 @@ func errPasswordsBusy() *apiError {
 		headers: http.Header{"Retry-After": []string{"1"}}}
 }
 
+// errStarting answers a request that needs the users before the admin
+// user is set up at start.
+func errStarting() *apiError {
+	return &apiError{status: http.StatusServiceUnavailable, Detail: "The API is starting, retry later",
+		headers: http.Header{"Retry-After": []string{"1"}}}
+}
+
 func errInternal() *apiError {
 	return newError(http.StatusInternalServerError, "Internal Server Error")
 }

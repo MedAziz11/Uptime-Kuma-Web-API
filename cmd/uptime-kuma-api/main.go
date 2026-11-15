@@ -51,6 +51,8 @@ type hooks struct {
 	// bcryptCost replaces auth.DefaultCost when not zero: cost 12 makes
 	// every login take seconds under the race detector.
 	bcryptCost int
+	// ensureAdmin replaces httpapi.EnsureAdmin when not nil.
+	ensureAdmin func(context.Context, httpapi.AdminStore, *auth.Passwords, string) (httpapi.AdminResult, error)
 }
 
 // run is main without the process: it serves until ctx is done.
@@ -106,14 +108,6 @@ func serve(ctx context.Context, cfg *config.Config, log *slog.Logger, h hooks) e
 	if err != nil {
 		return err
 	}
-	switch res, err := httpapi.EnsureAdmin(ctx, st, passwords, cfg.AdminPassword.Value()); {
-	case err != nil:
-		return fmt.Errorf("set up the admin user: %w", err)
-	case res == httpapi.AdminCreated:
-		log.Info("created the 'admin' user")
-	case res == httpapi.AdminPasswordUpdated:
-		log.Info("updated the 'admin' password from ADMIN_PASSWORD")
-	}
 
 	// Created, not connected: the first call connects, so the API starts
 	// and answers /health while Uptime Kuma is down.
@@ -136,6 +130,41 @@ func serve(ctx context.Context, cfg *config.Config, log *slog.Logger, h hooks) e
 	}
 	defer session.Close()
 
+	// The admin user is set up while the server already answers: checking
+	// ADMIN_PASSWORD is a bcrypt operation (about 300 ms), which would
+	// otherwise delay /health at every start. Until it is done, logins and
+	// authenticated requests wait for it (httpapi.Options.AdminReady).
+	adminReady := make(chan struct{})
+	ctx, stop := context.WithCancel(ctx)
+	defer stop()
+	ensureAdmin := httpapi.EnsureAdmin
+	if h.ensureAdmin != nil {
+		ensureAdmin = h.ensureAdmin
+	}
+	var adminErr error
+	adminDone := make(chan struct{})
+	go func() {
+		defer close(adminDone)
+		switch res, err := ensureAdmin(ctx, st, passwords, cfg.AdminPassword.Value()); {
+		case err != nil && ctx.Err() != nil:
+			return // shutting down
+		case err != nil:
+			adminErr = fmt.Errorf("set up the admin user: %w", err)
+			stop() // shuts the server down: serve fails
+			return
+		case res == httpapi.AdminCreated:
+			log.Info("created the 'admin' user")
+		case res == httpapi.AdminPasswordUpdated:
+			log.Info("updated the 'admin' password from ADMIN_PASSWORD")
+		}
+		close(adminReady)
+	}()
+	// Before the store is closed (deferred above), on every return.
+	defer func() {
+		stop()
+		<-adminDone
+	}()
+
 	api, err := httpapi.New(httpapi.Options{
 		Users:       st,
 		Passwords:   passwords,
@@ -144,6 +173,7 @@ func serve(ctx context.Context, cfg *config.Config, log *slog.Logger, h hooks) e
 		CORSOrigins: cfg.CORSOrigins,
 		Logger:      log,
 		Version:     version.Version,
+		AdminReady:  adminReady,
 	})
 	if err != nil {
 		return err
@@ -157,7 +187,13 @@ func serve(ctx context.Context, cfg *config.Config, log *slog.Logger, h hooks) e
 		h.ready(ln.Addr())
 	}
 	srv := httpapi.NewHTTPServer(api, cfg.KumaTimeout, log)
-	if err := httpapi.Serve(ctx, srv, ln, httpapi.ShutdownTimeout); err != nil {
+	err = httpapi.Serve(ctx, srv, ln, httpapi.ShutdownTimeout)
+	stop()
+	<-adminDone
+	if adminErr != nil {
+		return adminErr
+	}
+	if err != nil {
 		return err
 	}
 	log.Info("uptime-kuma-api stopped")

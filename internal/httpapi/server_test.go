@@ -755,3 +755,27 @@ func TestPasswordsWithoutABcryptSlotAre503(t *testing.T) {
 		}
 	}
 }
+
+// Until the admin user is set up, logins and authenticated requests wait
+// for it, then answer 503.
+func TestRequestsWaitForTheAdminSetup(t *testing.T) {
+	ready := make(chan struct{})
+	e := newEnv(t, Options{PasswordWait: 20 * time.Millisecond, AdminReady: ready})
+	token := e.tk.Issue("admin")
+	for _, res := range []*http.Response{
+		e.do(t, "POST", "/login/access-token", "", "application/x-www-form-urlencoded", "username=admin&password=admin-password"),
+		e.do(t, "GET", "/users/me", token, "", ""),
+	} {
+		if res.StatusCode != 503 || res.Header.Get("Retry-After") != "1" || detail(t, res) != "The API is starting, retry later" {
+			t.Fatalf("%d %v", res.StatusCode, res.Header)
+		}
+	}
+	if res := e.do(t, "GET", "/health", "", "", ""); res.StatusCode != 200 {
+		t.Fatalf("health: %d", res.StatusCode)
+	}
+	close(ready)
+	e.login(t, "admin", "admin-password")
+	if res := e.do(t, "GET", "/users/me", token, "", ""); res.StatusCode != 200 {
+		t.Fatalf("me: %d", res.StatusCode)
+	}
+}

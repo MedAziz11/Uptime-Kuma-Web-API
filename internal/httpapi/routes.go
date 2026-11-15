@@ -436,6 +436,9 @@ func (s *Server) internal(ctx context.Context, what string, err error) error {
 }
 
 func (s *Server) login(ctx context.Context, in *rawBodyInput) (*tokenOutput, error) {
+	if err := s.waitAdmin(ctx); err != nil {
+		return nil, err
+	}
 	form, aerr := parseLoginForm(in.ContentType, in.RawBody)
 	if aerr != nil {
 		return nil, aerr
@@ -465,6 +468,28 @@ func (s *Server) login(ctx context.Context, in *rawBodyInput) (*tokenOutput, err
 		return nil, s.internal(ctx, "update last visit", err)
 	}
 	return &tokenOutput{Body: Token{AccessToken: s.tokens.Issue(user.Username), TokenType: "bearer"}}, nil
+}
+
+// waitAdmin waits until the admin user is set up (Options.AdminReady),
+// at most passwordWait.
+func (s *Server) waitAdmin(ctx context.Context) *apiError {
+	select {
+	case <-s.adminReady:
+		return nil
+	default:
+	}
+	if s.adminReady == nil {
+		return nil
+	}
+	t := time.NewTimer(s.passwordWait)
+	defer t.Stop()
+	select {
+	case <-s.adminReady:
+		return nil
+	case <-t.C:
+	case <-ctx.Done():
+	}
+	return errStarting()
 }
 
 // verifyPassword and hashPassword run bcrypt, waiting at most passwordWait

@@ -55,6 +55,10 @@ type Options struct {
 	// PasswordWait bounds how long a login or user creation waits for a
 	// bcrypt slot before a 503; default DefaultPasswordWait.
 	PasswordWait time.Duration
+	// AdminReady, if not nil, is closed once the admin user is set up
+	// (EnsureAdmin). Until then logins and authenticated requests wait for
+	// it, at most PasswordWait, then answer 503.
+	AdminReady <-chan struct{}
 }
 
 // DefaultPasswordWait is the default of Options.PasswordWait: about ten
@@ -72,6 +76,7 @@ type Server struct {
 	version   string
 
 	passwordWait time.Duration
+	adminReady   <-chan struct{}
 
 	mux     *http.ServeMux
 	api     huma.API
@@ -106,6 +111,7 @@ func New(opts Options) (*Server, error) {
 		version:   opts.Version,
 
 		passwordWait: opts.PasswordWait,
+		adminReady:   opts.AdminReady,
 		mux:          http.NewServeMux(),
 	}
 	s.api = humago.New(s.mux, s.humaConfig())

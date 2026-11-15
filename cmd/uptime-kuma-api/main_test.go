@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -17,6 +18,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/auth"
+	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/httpapi"
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/version"
 )
 
@@ -200,5 +203,61 @@ func TestRuntimeErrors(t *testing.T) {
 				t.Fatalf("stderr %s", stderr.String())
 			}
 		})
+	}
+}
+
+// /health answers while the admin user is being set up; a login waits for
+// the setup to end.
+func TestServesBeforeTheAdminSetupEnds(t *testing.T) {
+	vars := baseEnv(t.TempDir())
+	logs := &lockedBuffer{}
+	release := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	addr := make(chan net.Addr, 1)
+	code := make(chan int, 1)
+	go func() {
+		code <- run(ctx, nil, lookup(vars), io.Discard, logs, hooks{
+			ready:      func(a net.Addr) { addr <- a },
+			bcryptCost: bcrypt.MinCost,
+			ensureAdmin: func(ctx context.Context, st httpapi.AdminStore, pw *auth.Passwords, password string) (httpapi.AdminResult, error) {
+				<-release
+				return httpapi.EnsureAdmin(ctx, st, pw, password)
+			},
+		})
+	}()
+	base := "http://" + (<-addr).String()
+	res, err := http.Get(base + "/health")
+	if err != nil || res.StatusCode != 200 {
+		t.Fatalf("health during the admin setup: %v %v", res, err)
+	}
+	res.Body.Close()
+	logins := make(chan int, 1)
+	go func() {
+		_, status := login(t, base, "admin-password-secret")
+		logins <- status
+	}()
+	time.Sleep(50 * time.Millisecond)
+	close(release)
+	if status := <-logins; status != 200 {
+		t.Fatalf("login during the admin setup: %d", status)
+	}
+	cancel()
+	if c := <-code; c != exitOK {
+		t.Fatalf("exit %d: %s", c, logs)
+	}
+}
+
+// A failed admin setup stops the server with a failure.
+func TestAdminSetupFailureStops(t *testing.T) {
+	vars := baseEnv(t.TempDir())
+	var stderr lockedBuffer
+	code := run(context.Background(), nil, lookup(vars), io.Discard, &stderr, hooks{
+		bcryptCost: bcrypt.MinCost,
+		ensureAdmin: func(context.Context, httpapi.AdminStore, *auth.Passwords, string) (httpapi.AdminResult, error) {
+			return 0, errors.New("broken store")
+		},
+	})
+	if code != exitFailed || !strings.Contains(stderr.String(), "set up the admin user: broken store") {
+		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
 }

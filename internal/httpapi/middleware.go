@@ -251,6 +251,10 @@ func (s *Server) withAuthentication(next http.Handler) http.Handler {
 			writeError(w, errNotAuthenticated())
 			return
 		}
+		if aerr := s.waitAdmin(r.Context()); aerr != nil {
+			writeError(w, aerr)
+			return
+		}
 		username, err := s.tokens.Subject(strings.TrimSpace(token))
 		if err != nil {
 			s.log.DebugContext(r.Context(), "token rejected", "request_id", infoFrom(r.Context()).id, "reason", err.Error())
