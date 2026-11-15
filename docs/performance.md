@@ -54,7 +54,7 @@ process 15 s after it connected to Kuma and answered one `GET /monitors`.
 | Measure | Target | Before (phase 3) | After | Python 2.0 |
 | ------- | ------ | ---------------- | ----- | ---------- |
 | `GET /monitors`, 200 monitors, p99 at 5,000 req/s, 64 connections | < 2 ms | saturates at 150-200 req/s (p99 0.56 s at 200 req/s, 10.8 s at 400 req/s) | full body: p99 2.8, 6.4, 5.9, 17.1 ms (4 runs); revalidated (304): p99 1.44, 1.45 ms | saturates between 5 and 10 req/s: p50 2.2 s at 5 req/s, 19 s at 10 req/s |
-| same, during a login flood (24 connections) | < 2 ms | revalidated: p50 27 s (reads starved) | revalidated: p99 5.5 ms; full body: p99 17.7 ms | — |
+| same, during a login flood (24 connections) | < 2 ms | revalidated: p50 27 s (reads starved) | revalidated: p99 5.5 to 19 ms over runs (16.8 ms in the validation run); full body: p99 17.7 ms | — |
 | Allocations per cached `GET` in the handler | 0 beyond net/http's | 53,417 (route alone) | 0 (`/monitors`, 304); 1 for `/monitors/{id}`, which is net/http's `ServeMux` wildcard match | — |
 | Idle resident memory | < 25 MB | 24.8 MB and 28.9 MB (two runs) | 22.9 MB (12.0 MB anonymous, 10.9 MB file-backed) | — |
 | Start to healthy | < 200 ms | 410-557 ms; 1.1-1.5 s in a later, slower run | 115 ms on an empty database, 29-59 ms on restarts | — |
