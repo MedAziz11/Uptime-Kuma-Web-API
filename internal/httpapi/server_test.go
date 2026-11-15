@@ -41,7 +41,7 @@ type testEnv struct {
 	adminToken string // set by call
 }
 
-func newEnv(t *testing.T, opts Options) *testEnv {
+func newEnv(t testing.TB, opts Options) *testEnv {
 	t.Helper()
 	st, err := store.Open(context.Background(), filepath.Join(t.TempDir(), "db.sqlite3"))
 	if err != nil {
@@ -65,7 +65,9 @@ func newEnv(t *testing.T, opts Options) *testEnv {
 		opts.Users = st
 	}
 	opts.Passwords, opts.Tokens, opts.Kuma = pw, tk, env.client
-	opts.Logger = slog.New(slog.NewJSONHandler(syncWriter{mu: &sync.Mutex{}, w: env.logs}, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	if opts.Logger == nil {
+		opts.Logger = slog.New(slog.NewJSONHandler(syncWriter{mu: &sync.Mutex{}, w: env.logs}, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	}
 	opts.Version = "3.0.0-test"
 	env.srv, err = New(opts)
 	if err != nil {
@@ -85,7 +87,7 @@ func (s syncWriter) Write(p []byte) (int, error) {
 	return s.w.Write(p)
 }
 
-func (e *testEnv) do(t *testing.T, method, path, token, contentType, body string) *http.Response {
+func (e *testEnv) do(t testing.TB, method, path, token, contentType, body string) *http.Response {
 	t.Helper()
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	if token != "" {
@@ -99,7 +101,7 @@ func (e *testEnv) do(t *testing.T, method, path, token, contentType, body string
 	return rec.Result()
 }
 
-func (e *testEnv) login(t *testing.T, user, password string) string {
+func (e *testEnv) login(t testing.TB, user, password string) string {
 	t.Helper()
 	res := e.do(t, "POST", "/login/access-token", "", "application/x-www-form-urlencoded",
 		url.Values{"username": {user}, "password": {password}}.Encode())
