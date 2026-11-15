@@ -117,7 +117,8 @@ func TestStateHandlers(t *testing.T) {
 			{"heartbeat", raw(`{"monitorID":7,"n":3}`)},
 			{"heartbeatList", raw(`7`, `[{"monitorID":7,"n":4}]`, `false`)},
 		}, func(t *testing.T, st *State) {
-			if b := heartbeatsOf(st, 7); len(b) != 4 || !strings.Contains(string(b[3]), `"n":4`) {
+			// The latest beats, at most MaxHeartbeats of them.
+			if b := heartbeatsOf(st, 7); len(b) != min(4, MaxHeartbeats) || !strings.Contains(string(b[len(b)-1]), `"n":4`) {
 				t.Fatalf("%s", b)
 			}
 		}},

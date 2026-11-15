@@ -43,9 +43,11 @@ func (l List) String() string {
 	return listNames[l]
 }
 
-// MaxHeartbeats is how many heartbeats State keeps per monitor (the length
-// of the list Uptime Kuma sends at login).
-const MaxHeartbeats = 100
+// MaxHeartbeats is how many heartbeats State keeps per monitor: the latest.
+// No route reads more (GET /monitors/{id}/beats asks Uptime Kuma), and
+// keeping the 100 that Uptime Kuma sends at login took 6 MB of the 29 MB
+// resident with 200 monitors, over the 25 MB target (docs/performance.md).
+const MaxHeartbeats = 1
 
 // Out-of-order monitor pushes. Uptime Kuma builds a monitor list (full, or
 // one monitor for updateMonitorIntoList) from database reads with many
@@ -480,7 +482,7 @@ func (st *State) onHeartbeatList(args []json.RawMessage) {
 	if !overwrite {
 		cur = st.beats[id]
 	}
-	for _, b := range beats {
+	for _, b := range beats[max(0, len(beats)-MaxHeartbeats):] {
 		cur = append(cur, bytes.Clone(b))
 	}
 	st.beats[id] = tail(cur)
