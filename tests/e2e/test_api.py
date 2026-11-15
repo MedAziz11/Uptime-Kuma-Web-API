@@ -16,7 +16,7 @@ def test_public_endpoints(api: Api):
 
 def test_server_info(api: Api):
     info = api.get("/info")
-    assert info["version"].startswith("1.")
+    assert info["version"].startswith("2.")
     assert "size" in api.get("/database/size")
     assert api.post("/database/shrink")["message"] == "DB Shrinked"
 
@@ -216,9 +216,11 @@ def test_status_pages(api: Api, monitor: int):
 
 
 def test_backup_import(api: Api):
+    # Uptime Kuma 2.x removed backup import: the route answers 410 Gone.
     backup = {"version": "1.23.0", "notificationList": [], "monitorList": [], "proxyList": []}
-    api.post("/settings/upload_backup?import_handle=skip", json=backup)
-    api.post("/settings/upload_backup?import_handle=nope", json=backup, expect=422)
+    gone = api.post("/settings/upload_backup?import_handle=skip", json=backup, expect=410)
+    assert "backup" in gone["detail"]
+    api.post("/settings/upload_backup?import_handle=nope", json=backup, expect=410)
 
 
 def test_users(api: Api):

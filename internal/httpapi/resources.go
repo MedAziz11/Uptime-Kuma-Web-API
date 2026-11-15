@@ -18,29 +18,33 @@ type (
 		TagID int64 `path:"tag_id"`
 	}
 	tagBodyInput struct {
-		tagIDParam
-		bodyInput
+		TagID       int64  `path:"tag_id"`
+		ContentType string `header:"Content-Type" hidden:"true"`
+		RawBody     []byte
 	}
 	notificationIDParam struct {
 		NotificationID int64 `path:"notification_id"`
 	}
 	notificationBodyInput struct {
-		notificationIDParam
-		bodyInput
+		NotificationID int64  `path:"notification_id"`
+		ContentType    string `header:"Content-Type" hidden:"true"`
+		RawBody        []byte
 	}
 	proxyIDParam struct {
 		ProxyID int64 `path:"proxy_id"`
 	}
 	proxyBodyInput struct {
-		proxyIDParam
-		bodyInput
+		ProxyID     int64  `path:"proxy_id"`
+		ContentType string `header:"Content-Type" hidden:"true"`
+		RawBody     []byte
 	}
 	dockerHostIDParam struct {
 		DockerHostID int64 `path:"docker_host_id"`
 	}
 	dockerHostBodyInput struct {
-		dockerHostIDParam
-		bodyInput
+		DockerHostID int64  `path:"docker_host_id"`
+		ContentType  string `header:"Content-Type" hidden:"true"`
+		RawBody      []byte
 	}
 )
 
@@ -133,7 +137,7 @@ func (s *Server) createTag(ctx context.Context, in *bodyInput) (*jsonOutput[TagO
 }
 
 func (s *Server) updateTag(ctx context.Context, in *tagBodyInput) (*jsonOutput[KumaMessage], error) {
-	changes, aerr := decodeModel(tagUpdateModel, &in.bodyInput)
+	changes, aerr := decodeModel(tagUpdateModel, in.body())
 	if aerr != nil {
 		return nil, aerr
 	}
@@ -263,7 +267,7 @@ func (s *Server) testNotification(ctx context.Context, in *bodyInput) (*jsonOutp
 }
 
 func (s *Server) updateNotification(ctx context.Context, in *notificationBodyInput) (*jsonOutput[KumaMessage], error) {
-	changes, aerr := decodeDict(notificationModel, &in.bodyInput)
+	changes, aerr := decodeDict(notificationModel, in.body())
 	if aerr != nil {
 		return nil, aerr
 	}
@@ -344,7 +348,7 @@ func (s *Server) createProxy(ctx context.Context, in *bodyInput) (*jsonOutput[Ku
 }
 
 func (s *Server) updateProxy(ctx context.Context, in *proxyBodyInput) (*jsonOutput[KumaMessage], error) {
-	changes, aerr := decodeDict(proxyModel, &in.bodyInput)
+	changes, aerr := decodeDict(proxyModel, in.body())
 	if aerr != nil {
 		return nil, aerr
 	}
@@ -436,7 +440,7 @@ func (s *Server) testDockerHost(ctx context.Context, in *bodyInput) (*jsonOutput
 }
 
 func (s *Server) updateDockerHost(ctx context.Context, in *dockerHostBodyInput) (*jsonOutput[KumaMessage], error) {
-	changes, aerr := decodeDict(dockerHostModel, &in.bodyInput)
+	changes, aerr := decodeDict(dockerHostModel, in.body())
 	if aerr != nil {
 		return nil, aerr
 	}

@@ -15,12 +15,13 @@ type (
 		MonitorID int64 `path:"monitor_id"`
 	}
 	monitorBodyInput struct {
-		monitorIDParam
-		bodyInput
+		MonitorID   int64  `path:"monitor_id"`
+		ContentType string `header:"Content-Type" hidden:"true"`
+		RawBody     []byte
 	}
 	beatsInput struct {
-		monitorIDParam
-		Hours float64 `query:"hours" default:"1" exclusiveMinimum:"0" doc:"Hours, greater than 0."`
+		MonitorID int64   `path:"monitor_id"`
+		Hours     float64 `query:"hours" default:"1" exclusiveMinimum:"0" doc:"Hours, greater than 0."`
 	}
 )
 
@@ -113,7 +114,7 @@ func (s *Server) createMonitor(ctx context.Context, in *bodyInput) (*jsonOutput[
 }
 
 func (s *Server) updateMonitor(ctx context.Context, in *monitorBodyInput) (*jsonOutput[MonitorUpdated], error) {
-	changes, aerr := decodeModel(monitorUpdateModel, &in.bodyInput)
+	changes, aerr := decodeModel(monitorUpdateModel, in.body())
 	if aerr != nil {
 		return nil, aerr
 	}
@@ -214,7 +215,7 @@ func monitorTag(in *bodyInput) (tagID int64, value string, _ *apiError) {
 }
 
 func (s *Server) addMonitorTag(ctx context.Context, in *monitorBodyInput) (*jsonOutput[KumaMessage], error) {
-	tagID, value, aerr := monitorTag(&in.bodyInput)
+	tagID, value, aerr := monitorTag(in.body())
 	if aerr != nil {
 		return nil, aerr
 	}
@@ -233,7 +234,7 @@ func (s *Server) addMonitorTag(ctx context.Context, in *monitorBodyInput) (*json
 }
 
 func (s *Server) deleteMonitorTag(ctx context.Context, in *monitorBodyInput) (*jsonOutput[KumaMessage], error) {
-	tagID, value, aerr := monitorTag(&in.bodyInput)
+	tagID, value, aerr := monitorTag(in.body())
 	if aerr != nil {
 		return nil, aerr
 	}

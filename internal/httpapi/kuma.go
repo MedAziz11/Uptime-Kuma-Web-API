@@ -193,6 +193,31 @@ type bodyInput struct {
 	RawBody     []byte
 }
 
+// Inputs with a path parameter and a body. Huma only reads the parameters
+// of the input struct itself, not of embedded structs.
+
+func (in *monitorBodyInput) body() *bodyInput {
+	return &bodyInput{ContentType: in.ContentType, RawBody: in.RawBody}
+}
+func (in *tagBodyInput) body() *bodyInput {
+	return &bodyInput{ContentType: in.ContentType, RawBody: in.RawBody}
+}
+func (in *notificationBodyInput) body() *bodyInput {
+	return &bodyInput{ContentType: in.ContentType, RawBody: in.RawBody}
+}
+func (in *proxyBodyInput) body() *bodyInput {
+	return &bodyInput{ContentType: in.ContentType, RawBody: in.RawBody}
+}
+func (in *dockerHostBodyInput) body() *bodyInput {
+	return &bodyInput{ContentType: in.ContentType, RawBody: in.RawBody}
+}
+func (in *maintenanceBodyInput) body() *bodyInput {
+	return &bodyInput{ContentType: in.ContentType, RawBody: in.RawBody}
+}
+func (in *slugBodyInput) body() *bodyInput {
+	return &bodyInput{ContentType: in.ContentType, RawBody: in.RawBody}
+}
+
 // decodeModel decodes and checks a body against model m.
 func decodeModel(m *model, in *bodyInput) (map[string]any, *apiError) {
 	v, aerr := decodeJSONBody(in.ContentType, in.RawBody)

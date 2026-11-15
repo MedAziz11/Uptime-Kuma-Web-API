@@ -18,15 +18,17 @@ type (
 		MaintenanceID int64 `path:"maintenance_id"`
 	}
 	maintenanceBodyInput struct {
-		maintenanceIDParam
-		bodyInput
+		MaintenanceID int64  `path:"maintenance_id"`
+		ContentType   string `header:"Content-Type" hidden:"true"`
+		RawBody       []byte
 	}
 	slugParam struct {
 		Slug string `path:"slug"`
 	}
 	slugBodyInput struct {
-		slugParam
-		bodyInput
+		Slug        string `path:"slug"`
+		ContentType string `header:"Content-Type" hidden:"true"`
+		RawBody     []byte
 	}
 )
 
@@ -118,7 +120,7 @@ func empty(v any) bool {
 }
 
 func (s *Server) updateMaintenance(ctx context.Context, in *maintenanceBodyInput) (*jsonOutput[MaintenanceUpdated], error) {
-	changes, aerr := decodeModel(maintenanceUpdateModel, &in.bodyInput)
+	changes, aerr := decodeModel(maintenanceUpdateModel, in.body())
 	if aerr != nil {
 		return nil, aerr
 	}
@@ -305,7 +307,7 @@ func (s *Server) getStatusPage(ctx context.Context, in *slugParam) (*jsonOutput[
 }
 
 func (s *Server) saveStatusPage(ctx context.Context, in *slugBodyInput) (*jsonOutput[Detail], error) {
-	changes, aerr := decodeModel(saveStatusPageModel, &in.bodyInput)
+	changes, aerr := decodeModel(saveStatusPageModel, in.body())
 	if aerr != nil {
 		return nil, aerr
 	}
@@ -358,7 +360,7 @@ func (s *Server) deleteStatusPage(ctx context.Context, in *slugParam) (*jsonOutp
 }
 
 func (s *Server) postIncident(ctx context.Context, in *slugBodyInput) (*jsonOutput[KumaObject], error) {
-	inc, aerr := decodeModel(postIncidentModel, &in.bodyInput)
+	inc, aerr := decodeModel(postIncidentModel, in.body())
 	if aerr != nil {
 		return nil, aerr
 	}

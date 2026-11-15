@@ -134,6 +134,10 @@ func paramIssues(errs []*huma.ErrorDetail) []validationIssue {
 			if f, err := strconv.ParseFloat(bound, 64); err == nil {
 				issue.Ctx = map[string]any{"gt": f}
 			}
+			// pydantic echoes the parameter as it was written.
+			if f, ok := e.Value.(float64); ok {
+				issue.Input = strconv.FormatFloat(f, 'f', -1, 64)
+			}
 		}
 		issues = append(issues, issue)
 	}
