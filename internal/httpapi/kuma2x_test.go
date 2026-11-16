@@ -120,3 +120,54 @@ func TestAPIKeyRoutes(t *testing.T) {
 		{"deleteAPIKey", "DELETE", fmt.Sprintf("/api_keys/%d", kid), ""},
 	})
 }
+
+func TestRemoteBrowserRoutes(t *testing.T) {
+	e := newEnv(t, Options{})
+	created := e.ok(t, "POST", "/remote_browsers", `{"name":"chrome","url":"ws://chrome:3000/playwright"}`)
+	if created["msg"] != "Saved." {
+		t.Fatalf("create %v", created)
+	}
+	id := int(get[float64](t, created, "id"))
+	path := fmt.Sprintf("/remote_browsers/%d", id)
+	b := e.ok(t, "GET", path, "")["remote_browser"].(map[string]any)
+	if b["name"] != "chrome" || b["url"] != "ws://chrome:3000/playwright" {
+		t.Fatalf("browser %v", b)
+	}
+	e.ok(t, "PATCH", path, `{"name":"renamed"}`)
+	if l := get[[]any](t, e.ok(t, "GET", "/remote_browsers", ""), "remote_browsers"); len(l) != 1 || get[string](t, l, 0, "name") != "renamed" || get[string](t, l, 0, "url") != "ws://chrome:3000/playwright" {
+		t.Fatalf("after patch %v", l)
+	}
+	if status, v := e.call(t, "POST", "/remote_browsers/test", `{"url":"ws://nowhere"}`); status != 400 || !strings.Contains(get[string](t, v, "detail"), "ECONNREFUSED") {
+		t.Fatalf("test: %d %v", status, v)
+	}
+	if r := e.ok(t, "DELETE", path, ""); r["msg"] != "Deleted Successfully." {
+		t.Fatalf("delete %v", r)
+	}
+	if status, _ := e.call(t, "GET", path, ""); status != 404 {
+		t.Fatalf("deleted browser: %d", status)
+	}
+
+	e.checkErrors(t, []errorCase{
+		{"GET", "/remote_browsers/99999", "", 404, "remote browser does not exist"},
+		{"PATCH", "/remote_browsers/99999", `{}`, 404, "remote browser does not exist"},
+		{"DELETE", "/remote_browsers/99999", "", 404, "remote browser does not exist"},
+		{"GET", "/remote_browsers/x", "", 422, "int_parsing path.remote_browser_id"},
+		{"POST", "/remote_browsers", `{"name":"x"}`, 422, "missing 1 required argument: 'url'"},
+		{"POST", "/remote_browsers", `{}`, 422, "missing 2 required argument: 'name', 'url'"},
+		{"POST", "/remote_browsers", `{"name":"x","url":1}`, 422, "string_type body.url"},
+		{"POST", "/remote_browsers/test", `{}`, 422, "missing 1 required argument: 'url'"},
+		{"POST", "/remote_browsers/test", `[]`, 422, "dict_type body"},
+	})
+	bid := int(get[float64](t, e.ok(t, "POST", "/remote_browsers", `{"name":"b","url":"ws://b"}`), "id"))
+	if status, v := e.call(t, "PATCH", fmt.Sprintf("/remote_browsers/%d", bid), `{"url":null}`); status != 422 || get[string](t, v, "detail") != "missing 1 required argument: 'url'" {
+		t.Fatalf("patch url null: %d %v", status, v)
+	}
+	if status, _ := e.call(t, "PATCH", fmt.Sprintf("/remote_browsers/%d", bid), `[]`); status != 422 {
+		t.Fatalf("patch list: %d", status)
+	}
+	e.checkKumaFailures(t, []struct{ event, method, path, body string }{
+		{"addRemoteBrowser", "POST", "/remote_browsers", `{"name":"x","url":"ws://x"}`},
+		{"addRemoteBrowser", "PATCH", fmt.Sprintf("/remote_browsers/%d", bid), `{}`},
+		{"deleteRemoteBrowser", "DELETE", fmt.Sprintf("/remote_browsers/%d", bid), ""},
+	})
+}

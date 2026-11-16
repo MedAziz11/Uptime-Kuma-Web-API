@@ -47,6 +47,7 @@ type Server struct {
 	maintMonitors map[int][]int
 	statusPages   map[int]Object
 	apiKeys       map[int]Object
+	browsers      map[int]Object
 	groups        map[int][]any // status page id -> public groups
 	incidents     map[int]Object
 	beats         map[int][]Object
@@ -64,7 +65,7 @@ func New() *Server {
 		sockets: map[*siotest.Socket]bool{}, nextID: 1,
 		monitors: map[int]Object{}, tags: map[int]Object{}, notifications: map[int]Object{},
 		proxies: map[int]Object{}, dockerHosts: map[int]Object{}, maintenances: map[int]Object{},
-		maintMonitors: map[int][]int{}, statusPages: map[int]Object{}, apiKeys: map[int]Object{}, groups: map[int][]any{},
+		maintMonitors: map[int][]int{}, statusPages: map[int]Object{}, apiKeys: map[int]Object{}, browsers: map[int]Object{}, groups: map[int][]any{},
 		incidents: map[int]Object{}, beats: map[int][]Object{}, failures: map[string]string{},
 		calls: map[string]int{},
 	}
@@ -109,7 +110,7 @@ func (k *Server) Counts() map[string]int {
 	return map[string]int{
 		"monitors": len(k.monitors), "tags": len(k.tags), "notifications": len(k.notifications),
 		"proxies": len(k.proxies), "docker hosts": len(k.dockerHosts), "maintenances": len(k.maintenances),
-		"status pages": len(k.statusPages), "api keys": len(k.apiKeys),
+		"status pages": len(k.statusPages), "api keys": len(k.apiKeys), "remote browsers": len(k.browsers),
 	}
 }
 
@@ -244,7 +245,7 @@ func (k *Server) afterLogin(s *siotest.Socket) {
 	monitors, maint := k.objectMap(k.monitors), k.objectMap(k.maintenances)
 	notifs, proxies, docker := values(k.notifications), values(k.proxies), values(k.dockerHosts)
 	pages := k.objectMap(k.statusPages)
-	keys := values(k.apiKeys)
+	keys, browsers := values(k.apiKeys), values(k.browsers)
 	beats := map[int][]Object{}
 	for id := range k.monitors {
 		beats[id] = slices.Clone(k.beats[id])
@@ -257,6 +258,7 @@ func (k *Server) afterLogin(s *siotest.Socket) {
 	_ = s.Emit("proxyList", proxies)
 	_ = s.Emit("dockerHostList", docker)
 	_ = s.Emit("apiKeyList", keys)
+	_ = s.Emit("remoteBrowserList", browsers)
 	_ = s.Emit("statusPageList", pages)
 	for id, b := range beats {
 		key := strconv.Itoa(id) // the login pushes ids as strings
@@ -336,6 +338,11 @@ func (k *Server) handlers() map[string]handler {
 		"addMonitorMaintenance": k.addMonitorMaintenance,
 		"getStatusPage":         k.getStatusPage, "addStatusPage": k.addStatusPage, "saveStatusPage": k.saveStatusPage,
 		"deleteStatusPage": k.deleteStatusPage, "postIncident": k.postIncident, "unpinIncident": k.unpinIncident,
+		"addRemoteBrowser":    k.save(&k.browsers, "remoteBrowserList", "Remote browser not found", browserRow),
+		"deleteRemoteBrowser": k.del(&k.browsers, "remoteBrowserList", "Remote Browser not found"),
+		"testRemoteBrowser": func(ev siotest.Event) (any, func()) {
+			return fail("browserType.connect: connect ECONNREFUSED " + fmt.Sprint(obj(ev, 0)["url"])), nil
+		},
 		"addAPIKey": k.addAPIKey, "getAPIKeyList": k.getAPIKeyList, "deleteAPIKey": k.deleteAPIKey,
 		"enableAPIKey": k.activateAPIKey(true), "disableAPIKey": k.activateAPIKey(false),
 		"getDatabaseSize": func(siotest.Event) (any, func()) { return ok("size", 61440), nil },
@@ -580,6 +587,10 @@ func proxyRow(id int, in Object) Object {
 
 func dockerRow(id int, in Object) Object {
 	return Object{"id": id, "userID": 1, "dockerDaemon": in["dockerDaemon"], "dockerType": in["dockerType"], "name": in["name"]}
+}
+
+func browserRow(id int, in Object) Object {
+	return Object{"id": id, "url": in["url"], "name": in["name"]}
 }
 
 func boolInt(v any) int {

@@ -280,6 +280,17 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	huma.Register(s.api, reg(post, "/api_keys/{api_key_id}/disable", "disable_api_key", "Disable an API key", "API Keys"), s.disableAPIKey)
 	huma.Register(s.api, reg(del, "/api_keys/{api_key_id}", "delete_api_key", "Delete an API key", "API Keys"), s.deleteAPIKey)
 
+	// Remote browsers (Uptime Kuma 2.x).
+	cachedRoute[struct{}, jsonOutput[RemoteBrowsers]](s, reg(get, "/remote_browsers", "get_remote_browsers", "Get all remote browsers", "Remote Browsers"), s.serveList(s.cache.remoteBrowsers))
+	huma.Register(s.api, reg(post, "/remote_browsers", "add_remote_browser", "Add a remote browser", "Remote Browsers"), s.createRemoteBrowser)
+	body(post, "/remote_browsers", "RemoteBrowserOptions", reflect.TypeFor[RemoteBrowserOptions]())
+	huma.Register(s.api, reg(post, "/remote_browsers/test", "test_remote_browser", "Test a remote browser", "Remote Browsers"), s.testRemoteBrowser)
+	body(post, "/remote_browsers/test", "RemoteBrowserOptions", reflect.TypeFor[RemoteBrowserOptions]())
+	cachedRoute[remoteBrowserIDParam, jsonOutput[RemoteBrowserResponse]](s, reg(get, "/remote_browsers/{remote_browser_id}", "get_remote_browser", "Get a remote browser", "Remote Browsers"), s.serveObject(s.cache.remoteBrowsers, "remote_browser_id", remoteBrowserNotFound))
+	huma.Register(s.api, reg(patch, "/remote_browsers/{remote_browser_id}", "update_remote_browser", "Update a remote browser", "Remote Browsers"), s.updateRemoteBrowser)
+	body(patch, "/remote_browsers/{remote_browser_id}", "RemoteBrowserOptions", reflect.TypeFor[RemoteBrowserOptions]())
+	huma.Register(s.api, reg(del, "/remote_browsers/{remote_browser_id}", "delete_remote_browser", "Delete a remote browser", "Remote Browsers"), s.deleteRemoteBrowser)
+
 	// Settings, database, server and statistics.
 	backup := reg(post, "/settings/upload_backup", "upload_backup", "Import a backup", "Settings")
 	backup.Deprecated = true

@@ -51,6 +51,10 @@ type Kuma interface {
 	DisableAPIKey(ctx context.Context, id int64) (json.RawMessage, error)
 	DeleteAPIKey(ctx context.Context, id int64) (json.RawMessage, error)
 
+	SaveRemoteBrowser(ctx context.Context, browser map[string]any, id *int64) (json.RawMessage, error)
+	DeleteRemoteBrowser(ctx context.Context, id int64) (json.RawMessage, error)
+	TestRemoteBrowser(ctx context.Context, browser map[string]any) (json.RawMessage, error)
+
 	AddMaintenance(ctx context.Context, m map[string]any) (json.RawMessage, error)
 	GetMaintenance(ctx context.Context, id int64) (json.RawMessage, error)
 	EditMaintenance(ctx context.Context, m map[string]any) (json.RawMessage, error)

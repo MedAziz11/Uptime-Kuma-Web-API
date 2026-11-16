@@ -196,6 +196,13 @@ type APIKeyOptions struct {
 	_       struct{} `json:"-" additionalProperties:"true"`
 }
 
+// RemoteBrowserOptions is the body of the remote browser routes.
+type RemoteBrowserOptions struct {
+	Name *string  `json:"name,omitempty" doc:"Required to add."`
+	URL  *string  `json:"url,omitempty" doc:"Required to add and test: the Playwright server, e.g. ws://chrome:3000/playwright."`
+	_    struct{} `json:"-" additionalProperties:"true"`
+}
+
 // The models of the bodies, built once from the types above.
 var (
 	monitorUpdateModel      = modelOf(reflect.TypeFor[MonitorUpdate]())
@@ -213,6 +220,7 @@ var (
 	saveStatusPageModel     = modelOf(reflect.TypeFor[SaveStatusPageRequest]())
 	postIncidentModel       = modelOf(reflect.TypeFor[PostIncidentRequest]())
 	apiKeyModel             = modelOf(reflect.TypeFor[APIKeyOptions]())
+	remoteBrowserModel      = modelOf(reflect.TypeFor[RemoteBrowserOptions]())
 )
 
 // Response bodies, for the OpenAPI document. The objects are Uptime Kuma's,
@@ -413,4 +421,14 @@ type APIKeyCreated struct {
 	Msg   string `json:"msg"`
 	Key   string `json:"key" doc:"The clear key, to send as the password of HTTP basic authentication to Uptime Kuma. It is shown only here."`
 	KeyID int64  `json:"keyID"`
+}
+
+// RemoteBrowsers is the body of GET /remote_browsers.
+type RemoteBrowsers struct {
+	RemoteBrowsers []KumaObject `json:"remote_browsers"`
+}
+
+// RemoteBrowserResponse is the body of GET /remote_browsers/{remote_browser_id}.
+type RemoteBrowserResponse struct {
+	RemoteBrowser KumaObject `json:"remote_browser"`
 }

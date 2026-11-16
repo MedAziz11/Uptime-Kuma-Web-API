@@ -230,18 +230,20 @@ func byMonitorRoute[V any](l kuma.List, read func(*kuma.State) (map[int64]V, kum
 type caches struct {
 	monitors, notifications, proxies, dockerHosts *bodyCache
 	maintenances, statusPages, apiKeys            *bodyCache
+	remoteBrowsers                                *bodyCache
 	info, avgPing, uptime, certInfo               *bodyCache
 }
 
 func newCaches() *caches {
 	return &caches{
-		monitors:      objectRoutes(kuma.Monitors, "monitors", "monitor", monitorView),
-		notifications: objectRoutes(kuma.Notifications, "notifications", "notification", notificationView),
-		proxies:       objectRoutes(kuma.Proxies, "proxies", "proxy", proxyView),
-		dockerHosts:   objectRoutes(kuma.DockerHosts, "docker_hosts", "docker_host", rawView),
-		maintenances:  objectRoutes(kuma.Maintenances, "maintenances", "", rawView),
-		statusPages:   objectRoutes(kuma.StatusPages, "statuspages", "", rawView),
-		apiKeys:       objectRoutes(kuma.APIKeys, "api_keys", "api_key", apiKeyView),
+		monitors:       objectRoutes(kuma.Monitors, "monitors", "monitor", monitorView),
+		notifications:  objectRoutes(kuma.Notifications, "notifications", "notification", notificationView),
+		proxies:        objectRoutes(kuma.Proxies, "proxies", "proxy", proxyView),
+		dockerHosts:    objectRoutes(kuma.DockerHosts, "docker_hosts", "docker_host", rawView),
+		maintenances:   objectRoutes(kuma.Maintenances, "maintenances", "", rawView),
+		statusPages:    objectRoutes(kuma.StatusPages, "statuspages", "", rawView),
+		apiKeys:        objectRoutes(kuma.APIKeys, "api_keys", "api_key", apiKeyView),
+		remoteBrowsers: objectRoutes(kuma.RemoteBrowsers, "remote_browsers", "remote_browser", rawView),
 		info: wholeRoute(kuma.Info, func(st *kuma.State) (any, bool, kuma.Snapshot) {
 			info, snap := st.Info()
 			return info, info != nil, snap

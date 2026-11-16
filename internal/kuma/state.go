@@ -23,6 +23,7 @@ const (
 	Maintenances
 	StatusPages
 	APIKeys
+	RemoteBrowsers
 	Info
 	Heartbeats
 	AvgPing
@@ -33,7 +34,7 @@ const (
 
 var listNames = [numLists]string{
 	"monitors", "notifications", "proxies", "docker hosts", "maintenances", "status pages",
-	"API keys", "info", "heartbeats", "average ping", "uptime", "certificate info",
+	"API keys", "remote browsers", "info", "heartbeats", "average ping", "uptime", "certificate info",
 }
 
 func (l List) String() string {
@@ -91,7 +92,7 @@ type State struct {
 	// synced is true from the end of a login to the next Reset.
 	synced bool
 
-	objects  [APIKeys + 1]map[int64]json.RawMessage // Monitors to APIKeys, by id
+	objects  [RemoteBrowsers + 1]map[int64]json.RawMessage // Monitors to RemoteBrowsers, by id
 	info     json.RawMessage
 	beats    map[int64][]json.RawMessage
 	avgPing  map[int64]json.RawMessage
@@ -141,6 +142,7 @@ func (st *State) Register(s *Session) {
 		"proxyList":             st.replaceArray(Proxies),
 		"dockerHostList":        st.replaceArray(DockerHosts),
 		"apiKeyList":            st.replaceArray(APIKeys),
+		"remoteBrowserList":     st.replaceArray(RemoteBrowsers),
 		"updateMonitorIntoList": st.onUpdateMonitors,
 		"deleteMonitorFromList": st.onDeleteMonitor,
 		"info":                  st.onInfo,
@@ -235,7 +237,7 @@ func (st *State) ObjectsByID(l List) ([]int64, []json.RawMessage, Snapshot) {
 	return ids, out, st.snapshotLocked(l)
 }
 
-// Objects returns the objects of list l (Monitors to APIKeys) by
+// Objects returns the objects of list l (Monitors to RemoteBrowsers) by
 // increasing id.
 func (st *State) Objects(l List) ([]json.RawMessage, Snapshot) {
 	_, out, snap := st.ObjectsByID(l)

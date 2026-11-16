@@ -55,3 +55,33 @@ func TestClientAPIKeys(t *testing.T) {
 		t.Fatal("refusal not reported")
 	}
 }
+
+// Remote browser writes are visible in State when they return.
+func TestClientRemoteBrowsers(t *testing.T) {
+	checkLeaks(t)
+	must := mustFor(t)
+	c, k, _ := newClient(t, testTimeout)
+	ctx := context.Background()
+	if err := c.Sync(ctx); err != nil {
+		t.Fatal(err)
+	}
+	st := c.State()
+	id := int64(field[float64](t, must(c.SaveRemoteBrowser(ctx, map[string]any{"name": "b", "url": "ws://x"}, nil)), "id"))
+	if objectField(t, st, RemoteBrowsers, id, "url") != "ws://x" {
+		t.Fatal("added browser not in State")
+	}
+	must(c.SaveRemoteBrowser(ctx, map[string]any{"name": "b", "url": "ws://y"}, &id))
+	if objectField(t, st, RemoteBrowsers, id, "url") != "ws://y" {
+		t.Fatal("edit not in State")
+	}
+	if _, err := c.TestRemoteBrowser(ctx, map[string]any{"url": "ws://y"}); err == nil {
+		t.Fatal("test of an unreachable browser succeeded")
+	}
+	must(c.DeleteRemoteBrowser(ctx, id))
+	if _, ok, _ := st.Object(RemoteBrowsers, id); ok {
+		t.Fatal("deleted browser still in State")
+	}
+	if n := k.Counts()["remote browsers"]; n != 0 {
+		t.Fatalf("%d browsers left", n)
+	}
+}

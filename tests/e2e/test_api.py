@@ -110,6 +110,28 @@ def test_api_keys(api: Api):
     api.post("/api_keys", json={}, expect=422)
 
 
+def test_remote_browsers(api: Api):
+    created = api.post("/remote_browsers", json={"name": "e2e browser", "url": "ws://127.0.0.1:1/playwright"})
+    browser_id = created["id"]
+    try:
+        assert api.get(f"/remote_browsers/{browser_id}")["remote_browser"] == {
+            "id": browser_id,
+            "name": "e2e browser",
+            "url": "ws://127.0.0.1:1/playwright",
+        }
+        api.patch(f"/remote_browsers/{browser_id}", json={"name": "renamed browser"})
+        browsers = {b["id"]: b for b in api.get("/remote_browsers")["remote_browsers"]}
+        assert browsers[browser_id]["name"] == "renamed browser"
+        # Nothing listens there: Uptime Kuma's connection error is a 400.
+        api.post("/remote_browsers/test", json={"url": "ws://127.0.0.1:1/playwright"}, expect=400)
+    finally:
+        api.delete(f"/remote_browsers/{browser_id}")
+    api.get(f"/remote_browsers/{browser_id}", expect=404)
+    api.patch(f"/remote_browsers/{UNKNOWN}", json={"name": "x"}, expect=404)
+    api.delete(f"/remote_browsers/{UNKNOWN}", expect=404)
+    api.post("/remote_browsers", json={"name": "x"}, expect=422)
+
+
 def test_monitor_lifecycle(api: Api, monitor: int):
     fetched = api.get(f"/monitors/{monitor}")["monitor"]
     assert fetched["name"] == "e2e monitor"

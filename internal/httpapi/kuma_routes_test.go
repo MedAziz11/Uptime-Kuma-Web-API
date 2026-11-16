@@ -474,7 +474,7 @@ func TestKumaRoutesUnavailable(t *testing.T) {
 	e.srv.kuma = kuma.NewClient(session)
 	for _, path := range []string{"/monitors", "/monitors/1", "/notifications", "/notifications/1", "/proxies", "/docker_hosts",
 		"/maintenance", "/statuspages", "/info", "/ping", "/uptime", "/cert_info", "/tags", "/database/size", "/monitors/1/beats",
-		"/api_keys", "/api_keys/1"} {
+		"/api_keys", "/api_keys/1", "/remote_browsers", "/remote_browsers/1"} {
 		if status, v := e.call(t, "GET", path, ""); status != 503 || get[string](t, v, "detail") != "Uptime Kuma is unavailable" {
 			t.Errorf("GET %s: %d %v", path, status, v)
 		}
@@ -616,6 +616,7 @@ func TestReadAfterLostConnectionIs503(t *testing.T) {
 		{"GET", "/maintenance"}, {"GET", "/statuspages"}, {"DELETE", "/statuspages/x"},
 		{"GET", "/info"}, {"GET", "/ping"}, {"GET", "/uptime"}, {"GET", "/cert_info"},
 		{"GET", "/api_keys"}, {"GET", "/api_keys/1"}, {"POST", "/api_keys/1/enable"},
+		{"GET", "/remote_browsers"}, {"GET", "/remote_browsers/1"}, {"DELETE", "/remote_browsers/1"},
 	} {
 		// Cached reads do not call Sync while State is synced: the
 		// connection drops before them too.

@@ -365,6 +365,24 @@ func (c *Client) DeleteAPIKey(ctx context.Context, id int64) (json.RawMessage, e
 	return c.write(ctx, APIKeys, "deleteAPIKey", id)
 }
 
+// Remote browsers: Uptime Kuma pushes the whole list after each change.
+
+// SaveRemoteBrowser sends "addRemoteBrowser": id nil adds, else edits.
+func (c *Client) SaveRemoteBrowser(ctx context.Context, browser map[string]any, id *int64) (json.RawMessage, error) {
+	return c.write(ctx, RemoteBrowsers, "addRemoteBrowser", browser, id)
+}
+
+// DeleteRemoteBrowser sends "deleteRemoteBrowser".
+func (c *Client) DeleteRemoteBrowser(ctx context.Context, id int64) (json.RawMessage, error) {
+	return c.write(ctx, RemoteBrowsers, "deleteRemoteBrowser", id)
+}
+
+// TestRemoteBrowser sends "testRemoteBrowser": Uptime Kuma connects to the
+// browser at browser["url"].
+func (c *Client) TestRemoteBrowser(ctx context.Context, browser map[string]any) (json.RawMessage, error) {
+	return c.s.Call(ctx, "testRemoteBrowser", browser)
+}
+
 // Maintenances: Uptime Kuma pushes the list after each change, except the
 // monitors of a maintenance, which are read with a command.
 
