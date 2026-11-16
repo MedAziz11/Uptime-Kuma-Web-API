@@ -221,6 +221,13 @@ func TestOpenAPIDocument(t *testing.T) {
 		"GET /info":                               "get_info_info_get",
 		"GET /ping":                               "get_avg_ping_ping_get",
 		"GET /uptime":                             "get_uptime_uptime_get",
+		// Uptime Kuma 2.x resources (3.0).
+		"GET /api_keys":                       "get_api_keys_api_keys_get",
+		"POST /api_keys":                      "add_api_key_api_keys_post",
+		"GET /api_keys/{api_key_id}":          "get_api_key_api_keys__api_key_id__get",
+		"POST /api_keys/{api_key_id}/enable":  "enable_api_key_api_keys__api_key_id__enable_post",
+		"POST /api_keys/{api_key_id}/disable": "disable_api_key_api_keys__api_key_id__disable_post",
+		"DELETE /api_keys/{api_key_id}":       "delete_api_key_api_keys__api_key_id__delete",
 	}
 	public := map[string]bool{"GET /health": true, "POST /login/access-token": true}
 	n := 0

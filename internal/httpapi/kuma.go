@@ -46,6 +46,11 @@ type Kuma interface {
 	TestDockerHost(ctx context.Context, host map[string]any) (json.RawMessage, error)
 	DeleteDockerHost(ctx context.Context, id int64) (json.RawMessage, error)
 
+	AddAPIKey(ctx context.Context, key map[string]any) (json.RawMessage, error)
+	EnableAPIKey(ctx context.Context, id int64) (json.RawMessage, error)
+	DisableAPIKey(ctx context.Context, id int64) (json.RawMessage, error)
+	DeleteAPIKey(ctx context.Context, id int64) (json.RawMessage, error)
+
 	AddMaintenance(ctx context.Context, m map[string]any) (json.RawMessage, error)
 	GetMaintenance(ctx context.Context, id int64) (json.RawMessage, error)
 	EditMaintenance(ctx context.Context, m map[string]any) (json.RawMessage, error)

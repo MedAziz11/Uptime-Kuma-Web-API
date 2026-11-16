@@ -188,6 +188,14 @@ type PostIncidentRequest struct {
 	Style   string `json:"style,omitempty" enum:"info,warning,danger,primary,light,dark" default:"primary"`
 }
 
+// APIKeyOptions is the body of POST /api_keys.
+type APIKeyOptions struct {
+	Name    *string  `json:"name,omitempty" doc:"Required."`
+	Expires *string  `json:"expires,omitempty" doc:"Expiry date, e.g. \"2027-01-01 00:00:00\"; null (default) never expires."`
+	Active  *bool    `json:"active,omitempty" doc:"Default true."`
+	_       struct{} `json:"-" additionalProperties:"true"`
+}
+
 // The models of the bodies, built once from the types above.
 var (
 	monitorUpdateModel      = modelOf(reflect.TypeFor[MonitorUpdate]())
@@ -204,6 +212,7 @@ var (
 	addStatusPageModel      = modelOf(reflect.TypeFor[AddStatusPageRequest]())
 	saveStatusPageModel     = modelOf(reflect.TypeFor[SaveStatusPageRequest]())
 	postIncidentModel       = modelOf(reflect.TypeFor[PostIncidentRequest]())
+	apiKeyModel             = modelOf(reflect.TypeFor[APIKeyOptions]())
 )
 
 // Response bodies, for the OpenAPI document. The objects are Uptime Kuma's,
@@ -377,3 +386,31 @@ type MonitorMaintenanceList []KumaObject
 
 // Gone is the body of POST /settings/upload_backup.
 type Gone = HTTPError
+
+// APIKeyObject is an API key, without the key itself.
+type APIKeyObject struct {
+	ID          int64    `json:"id"`
+	Name        string   `json:"name"`
+	Active      bool     `json:"active"`
+	Expires     *string  `json:"expires"`
+	Status      string   `json:"status" enum:"active,inactive,expired"`
+	CreatedDate string   `json:"createdDate"`
+	_           struct{} `json:"-" additionalProperties:"true"`
+}
+
+// APIKeys is the body of GET /api_keys.
+type APIKeys struct {
+	APIKeys []APIKeyObject `json:"api_keys"`
+}
+
+// APIKeyResponse is the body of GET /api_keys/{api_key_id}.
+type APIKeyResponse struct {
+	APIKey APIKeyObject `json:"api_key"`
+}
+
+// APIKeyCreated is the body of POST /api_keys.
+type APIKeyCreated struct {
+	Msg   string `json:"msg"`
+	Key   string `json:"key" doc:"The clear key, to send as the password of HTTP basic authentication to Uptime Kuma. It is shown only here."`
+	KeyID int64  `json:"keyID"`
+}

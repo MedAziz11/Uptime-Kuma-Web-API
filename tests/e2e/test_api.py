@@ -89,6 +89,27 @@ def test_docker_hosts(api: Api):
     api.delete(f"/docker_hosts/{UNKNOWN}", expect=404)
 
 
+def test_api_keys(api: Api):
+    created = api.post("/api_keys", json={"name": "e2e key"})
+    key_id = created["keyID"]
+    try:
+        assert created["key"].startswith(f"uk{key_id}_")
+        key = api.get(f"/api_keys/{key_id}")["api_key"]
+        assert (key["name"], key["active"], key["expires"], key["status"]) == ("e2e key", True, None, "active")
+        assert "key" not in key
+        api.post(f"/api_keys/{key_id}/disable")
+        assert api.get(f"/api_keys/{key_id}")["api_key"]["status"] == "inactive"
+        api.post(f"/api_keys/{key_id}/enable")
+        keys = {k["id"]: k for k in api.get("/api_keys")["api_keys"]}
+        assert keys[key_id]["active"] is True
+    finally:
+        api.delete(f"/api_keys/{key_id}")
+    api.get(f"/api_keys/{key_id}", expect=404)
+    api.post(f"/api_keys/{UNKNOWN}/enable", expect=404)
+    api.delete(f"/api_keys/{UNKNOWN}", expect=404)
+    api.post("/api_keys", json={}, expect=422)
+
+
 def test_monitor_lifecycle(api: Api, monitor: int):
     fetched = api.get(f"/monitors/{monitor}")["monitor"]
     assert fetched["name"] == "e2e monitor"

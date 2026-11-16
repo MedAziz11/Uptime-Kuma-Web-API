@@ -341,6 +341,30 @@ func (c *Client) DeleteDockerHost(ctx context.Context, id int64) (json.RawMessag
 	return c.write(ctx, DockerHosts, "deleteDockerHost", id)
 }
 
+// API keys: Uptime Kuma pushes the whole list (without the keys) after each
+// change, also for an unknown id.
+
+// AddAPIKey sends "addAPIKey". The ack holds the clear key ("key"), which
+// Uptime Kuma never sends again, and its id ("keyID").
+func (c *Client) AddAPIKey(ctx context.Context, key map[string]any) (json.RawMessage, error) {
+	return c.write(ctx, APIKeys, "addAPIKey", key)
+}
+
+// EnableAPIKey sends "enableAPIKey".
+func (c *Client) EnableAPIKey(ctx context.Context, id int64) (json.RawMessage, error) {
+	return c.write(ctx, APIKeys, "enableAPIKey", id)
+}
+
+// DisableAPIKey sends "disableAPIKey".
+func (c *Client) DisableAPIKey(ctx context.Context, id int64) (json.RawMessage, error) {
+	return c.write(ctx, APIKeys, "disableAPIKey", id)
+}
+
+// DeleteAPIKey sends "deleteAPIKey".
+func (c *Client) DeleteAPIKey(ctx context.Context, id int64) (json.RawMessage, error) {
+	return c.write(ctx, APIKeys, "deleteAPIKey", id)
+}
+
 // Maintenances: Uptime Kuma pushes the list after each change, except the
 // monitors of a maintenance, which are read with a command.
 

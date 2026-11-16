@@ -271,6 +271,15 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	body(patch, "/docker_hosts/{docker_host_id}", "DockerHostOptions", reflect.TypeFor[DockerHostOptions]())
 	huma.Register(s.api, reg(del, "/docker_hosts/{docker_host_id}", "delete_docker_host", "Delete a docker host", "Docker Hosts"), s.deleteDockerHost)
 
+	// API keys (Uptime Kuma 2.x).
+	cachedRoute[struct{}, jsonOutput[APIKeys]](s, reg(get, "/api_keys", "get_api_keys", "Get all API keys", "API Keys"), s.serveList(s.cache.apiKeys))
+	huma.Register(s.api, reg(post, "/api_keys", "add_api_key", "Add an API key", "API Keys"), s.createAPIKey)
+	s.documentRequiredBody("/api_keys", post, "APIKeyOptions", reflect.TypeFor[APIKeyOptions](), "name")
+	cachedRoute[apiKeyIDParam, jsonOutput[APIKeyResponse]](s, reg(get, "/api_keys/{api_key_id}", "get_api_key", "Get an API key", "API Keys"), s.serveObject(s.cache.apiKeys, "api_key_id", apiKeyNotFound))
+	huma.Register(s.api, reg(post, "/api_keys/{api_key_id}/enable", "enable_api_key", "Enable an API key", "API Keys"), s.enableAPIKey)
+	huma.Register(s.api, reg(post, "/api_keys/{api_key_id}/disable", "disable_api_key", "Disable an API key", "API Keys"), s.disableAPIKey)
+	huma.Register(s.api, reg(del, "/api_keys/{api_key_id}", "delete_api_key", "Delete an API key", "API Keys"), s.deleteAPIKey)
+
 	// Settings, database, server and statistics.
 	backup := reg(post, "/settings/upload_backup", "upload_backup", "Import a backup", "Settings")
 	backup.Deprecated = true
