@@ -24,12 +24,26 @@ const testTimeout = 5 * time.Second
 func checkLeaks(t *testing.T) {
 	t.Helper()
 	t.Cleanup(func() {
-		buf := make([]byte, 1<<20)
-		stacks := string(buf[:runtime.Stack(buf, true)])
-		for _, fn := range []string{"sio.(*Conn).readLoop", "sio.(*Conn).writeLoop", "siotest.(*Socket).pingLoop", "siotest.(*Server).serve"} {
-			if strings.Contains(stacks, fn) {
-				t.Errorf("goroutine leak: %s is still running\n%s", fn, stacks)
+		// A goroutine that a Close waited for may still be returning (its
+		// deferred wg.Done has run): give it a moment to end.
+		deadline := time.Now().Add(2 * time.Second)
+		for {
+			buf := make([]byte, 1<<20)
+			stacks := string(buf[:runtime.Stack(buf, true)])
+			leaked := ""
+			for _, fn := range []string{"sio.(*Conn).readLoop", "sio.(*Conn).writeLoop", "siotest.(*Socket).pingLoop", "siotest.(*Server).serve"} {
+				if strings.Contains(stacks, fn) {
+					leaked = fn
+				}
 			}
+			if leaked == "" {
+				return
+			}
+			if time.Now().After(deadline) {
+				t.Errorf("goroutine leak: %s is still running\n%s", leaked, stacks)
+				return
+			}
+			time.Sleep(5 * time.Millisecond)
 		}
 	})
 }

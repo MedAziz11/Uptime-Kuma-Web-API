@@ -90,8 +90,8 @@ func NewServer(opts Options) *Server {
 // Close disconnects every socket, stops the server and waits for its
 // goroutines.
 func (s *Server) Close() {
-	s.cancel()
 	s.mu.Lock()
+	s.cancel()
 	for sock := range s.sockets {
 		sock.ws.CloseNow()
 	}
@@ -134,7 +134,16 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ws.SetReadLimit(int64(s.opts.MaxPayload) + 16)
+	// Under mu, so that Close either sees this Add before it waits or has
+	// cancelled s.ctx before the check.
+	s.mu.Lock()
+	if s.ctx.Err() != nil {
+		s.mu.Unlock()
+		ws.CloseNow()
+		return
+	}
 	s.wg.Add(1)
+	s.mu.Unlock()
 	defer s.wg.Done()
 
 	sock := &Socket{ws: ws, srv: s, pong: make(chan struct{}, 1), closed: make(chan struct{})}

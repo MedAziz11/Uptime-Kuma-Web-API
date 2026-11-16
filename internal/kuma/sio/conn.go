@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -102,6 +103,10 @@ type Conn struct {
 	pending map[uint64]chan ackResult
 
 	closeOnce sync.Once
+	// closing is set when Close starts: the server may answer the
+	// DISCONNECT by closing the WebSocket before Close shuts the connection
+	// down, and the reader's error must not replace ErrClosed then.
+	closing atomic.Bool
 }
 
 type ackResult struct {
@@ -425,6 +430,7 @@ func (c *Conn) Err() error {
 // the connection's goroutines to exit. Pending calls fail with ErrClosed.
 func (c *Conn) Close() error {
 	c.closeOnce.Do(func() {
+		c.closing.Store(true)
 		// Best effort: tell the server we leave the namespace.
 		f := c.frames.Get().(*frame)
 		f.buf.WriteByte(engineMessage)
@@ -458,6 +464,9 @@ func (c *Conn) Close() error {
 
 // fail closes the connection after an error.
 func (c *Conn) fail(err error) {
+	if c.closing.Load() {
+		err = ErrClosed
+	}
 	c.shutdown(err)
 	c.ws.CloseNow()
 }
