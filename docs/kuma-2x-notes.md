@@ -120,7 +120,7 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 | `POST /monitors/{id}/tag` with an unknown tag | 404 `Not found` from Kuma's foreign key error | 404 `tag does not exist`, checked first | |
 | `POST /maintenance/{id}/monitors`, `DELETE /statuspages/{slug}/incident/unpin` with an unknown id or slug | Kuma's error or success | 404, checked first | Kuma would store links to nothing or answer success |
 | `ctx` of a query parameter's `greater_than` | `{"gt": 0.0}` | `{"gt": 0}` | Same number in JSON |
-| Reads served from State (`/monitors`, `/monitors/{id}`, `/notifications[/{id}]`, `/proxies[/{id}]`, `/docker_hosts[/{id}]`, `/maintenance`, `/statuspages`, `/uptime`, `/ping`, `/cert_info`, `/info`) | no validator | strong `ETag`, `Cache-Control: private, no-cache`, `If-None-Match` answers `304`; always `Content-Length` (no chunked encoding) | Response cache (`docs/performance.md`); the answers are per user, so no shared cache may keep them, and Kuma may push a change at any time, so clients revalidate |
+| Reads served from State (`/monitors`, `/monitors/{id}`, `/notifications[/{id}]`, `/proxies[/{id}]`, `/docker_hosts[/{id}]`, `/maintenance`, `/statuspages`, `/uptime`, `/ping`, `/cert_info`, `/info`, and the new `/api_keys[/{id}]`, `/remote_browsers[/{id}]`) | no validator | strong `ETag`, `Cache-Control: private, no-cache`, `If-None-Match` answers `304`; always `Content-Length` (no chunked encoding) | Response cache (`docs/performance.md`); the answers are per user, so no shared cache may keep them, and Kuma may push a change at any time, so clients revalidate |
 | Login or user creation while the bcrypt slots are busy for 3 s | waited | `503 Too many logins in progress, retry later`, `Retry-After: 1` | At most a quarter of the CPUs run bcrypt at once |
 | Login or authenticated request in the first moments after start | (not served yet) | waits for the admin user setup, at most 3 s, then `503 The API is starting, retry later` | `/health` answers before the bcrypt check of `ADMIN_PASSWORD` ends |
 
@@ -155,10 +155,74 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
   an update or deletion was applied less than 2 s before it (verifying every unrequested list
   would never settle with two API instances on one Kuma user).
 
+## Routes for the 2.x resources (phase 5)
+
+New in 3.0; 2.0 had none of them. Paths, keys, authentication, error mapping and OpenAPI
+registration follow the neighbouring resources: snake_case paths, lists under a snake_case key,
+one object under its singular key, Kuma's ack (without `ok`, message in English) for writes, 404
+`<resource> does not exist` for an unknown id checked in State, 422 in FastAPI's shape.
+
+| Method and path | Kuma event | Served from |
+| --------------- | ---------- | ----------- |
+| `GET /api_keys` → `{"api_keys": [...]}` | (pushed `apiKeyList`) | State, response cache |
+| `GET /api_keys/{api_key_id}` → `{"api_key": ...}` | (pushed `apiKeyList`) | State, response cache |
+| `POST /api_keys` `{name, expires?, active?}` → `{msg, key, keyID}` | `addAPIKey` | write, waits for `apiKeyList` |
+| `POST /api_keys/{api_key_id}/enable`, `/disable` | `enableAPIKey`, `disableAPIKey` | write, waits for `apiKeyList` |
+| `DELETE /api_keys/{api_key_id}` | `deleteAPIKey` | write, waits for `apiKeyList` |
+| `GET /remote_browsers` → `{"remote_browsers": [...]}` | (pushed `remoteBrowserList`) | State, response cache |
+| `GET /remote_browsers/{remote_browser_id}` → `{"remote_browser": ...}` | (pushed `remoteBrowserList`) | State, response cache |
+| `POST /remote_browsers` `{name, url}`, `PATCH /remote_browsers/{remote_browser_id}` | `addRemoteBrowser` | write, waits for `remoteBrowserList` |
+| `DELETE /remote_browsers/{remote_browser_id}` | `deleteRemoteBrowser` | write, waits for `remoteBrowserList` |
+| `POST /remote_browsers/test` `{url}` | `testRemoteBrowser` | Kuma |
+| `GET /statuspages/{slug}/incidents?cursor=` → `{incidents, total, nextCursor, hasMore}` | `getIncidentHistory` | Kuma (single flight) |
+| `PATCH /statuspages/{slug}/incidents/{incident_id}` `{title?, content?, style?, pin?}` → `{msg, incident}` | `getIncidentHistory` (to merge), `editIncident` | Kuma |
+| `DELETE /statuspages/{slug}/incidents/{incident_id}` | `deleteIncident` | Kuma |
+| `POST /statuspages/{slug}/incidents/{incident_id}/resolve` → `{msg, incident}` | `resolveIncident` | Kuma |
+| `GET /monitors/{monitor_id}/chart?period=24` → `{"chart_data": [...]}` | `getMonitorChartData` | Kuma (single flight), monitor checked in State |
+| `GET /monitors/{monitor_id}/important_beats?offset=0&limit=25` → `{important_beats, total}` | `monitorImportantHeartbeatListCount`, `...Paged` | Kuma (single flight), monitor checked in State |
+| `GET /push_examples/{language}` → `{"code": ...}` | `getPushExample` | Kuma (single flight) |
+
+- The existing `POST /statuspages/{slug}/incident` and `DELETE /statuspages/{slug}/incident/unpin`
+  keep 2.0's singular path; the new incident routes use the plural collection
+  `/statuspages/{slug}/incidents`.
+- Request bodies pass through to Kuma (no allowlist); documented fields are type-checked. Creating
+  an API key defaults `active` to true and `expires` to null, as Kuma's dialog does; a remote
+  browser needs `name` and `url`.
+- Incidents are not in State (Kuma pushes nothing for them): every read goes to Kuma, which stores
+  a change before it acks it, and the single-flight reads only join calls sent after every write
+  that returned, so a write is visible to the next read without a read-back. The public page
+  (`GET /statuspages/{slug}`) is read with `Cache-Control: no-cache` as before.
+- `PATCH` of an incident merges into the incident as Kuma lists it (Kuma's `editIncident` replaces
+  title, content, style and pin, and requires title and content), found in the history or on the
+  public page. An unknown incident is 404 `incident does not exist` there; `DELETE` and `resolve`
+  answer Kuma's own 404 `Incident not found or access denied`; an unknown slug is 404
+  `slug is not found` everywhere.
+- `checkDomain` is not exposed: its refusals are translation keys with parameters
+  (`domain_expiry_unsupported_...`, `meta`) and it looks up RDAP servers over the network, so it is
+  not a plain pass-through.
+
+Observed on 2.5.11 for these resources:
+
+- `addAPIKey` pushes `apiKeyList` before its ack; enable, disable and delete ack first and push
+  after. All three answer success and push for an unknown id; the API checks State first and
+  answers 404. `addAPIKey` also turns Kuma's `apiKeysEnabled` setting on (it is never turned off).
+  The clear key (`uk<id>_<40 characters>`) is only in the ack; the pushed list has no key.
+- `testRemoteBrowser` against a closed port fails with Playwright's multi-line connection error,
+  returned as the 400 detail (as `testDockerHost`'s errors are).
+- `getIncidentHistory` pages 10 incidents at a time with the creation date of the last one as the
+  cursor, to the second, and counts `hasMore` with `created_date < cursor`. Incidents created in
+  the same second as the last one of a page are never returned: 23 incidents posted within one
+  second gave one page of 10 with `hasMore: false`, `total: 23`
+  (`TestRealKumaIncidentHistory`). The route passes this through; `PATCH` falls back to the
+  public page, which lists every pinned, active incident.
+- `getMonitorChartData`, `monitorImportantHeartbeatListCount` and `...Paged` answer success with
+  empty or zero data for an unknown monitor (`TestRealKumaChartOfUnknownMonitor`); the routes
+  answer 404 from State. The chart is by minute up to 24 hours, by hour up to 720, else by day.
+
 ## Known limitations
 
 - The other full lists (`notificationList`, `proxyList`, `dockerHostList`, `apiKeyList`,
-  `maintenanceList`) are applied as they arrive. Kuma builds the first four from one database
+  `remoteBrowserList`, `maintenanceList`) are applied as they arrive. Kuma builds the first five from one database
   query each and emits right after it (`server/client.js`): they arrive in order as long as the
   database answers queries in order, which holds for SQLite through Kuma's single connection but
   not necessarily for MariaDB with a connection pool. `maintenanceList` is built with one await per
