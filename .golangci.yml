@@ -1,0 +1,47 @@
+version: "2"
+
+linters:
+  # errcheck, govet, ineffassign, staticcheck, unused
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - gosec
+    - misspell
+    - nolintlint
+    - unconvert
+  settings:
+    errcheck:
+      exclude-functions:
+        # Best-effort close of a connection that has already failed
+        - (*github.com/coder/websocket.Conn).CloseNow
+    errorlint:
+      # fmt.Errorf with %v is used where the cause must not be matched (or may be nil)
+      errorf: false
+    gosec:
+      excludes:
+        - G104 # unchecked errors: errcheck reports them
+    misspell:
+      ignore-rules:
+        - shrinked # "DB Shrinked", the response text of 2.0
+    staticcheck:
+      # The default set without QF1001 (De Morgan's law)
+      checks: ["all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022", "-QF1001"]
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - bodyclose
+          - errcheck
+          - errorlint
+          - gosec
+      # The load generator and the fake servers of the tests
+      - path: (^tools/|/kumatest/|/siotest/)
+        linters:
+          - gosec
+
+formatters:
+  enable:
+    - gofmt
