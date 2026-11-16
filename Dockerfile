@@ -32,7 +32,8 @@ USER 100:101
 EXPOSE 8000
 VOLUME /db
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+# Checked every second during the start period (Docker 25 and later), then every 30 s.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --start-interval=1s --retries=3 \
     CMD ["/uptime-kuma-api", "healthcheck"]
 
 ENTRYPOINT ["/uptime-kuma-api"]
