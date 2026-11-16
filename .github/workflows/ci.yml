@@ -16,94 +16,85 @@ permissions:
 env:
   DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'medaziz11' }}
   DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'uptimekuma_restapi' }}
+  # Also in the Makefile
+  GOLANGCI_LINT_VERSION: v2.15.0
+  GOVULNCHECK_VERSION: v1.9.0
 
 jobs:
-  lint:
-    name: Lint
+  go:
+    name: Go (format, vet, tests, lint, vulnerabilities, build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-go@v7
         with:
-          python-version: "3.13"
-          cache: pip
-          cache-dependency-path: requirements*.txt
+          go-version-file: go.mod
 
-      - run: pip install -r requirements-dev.txt
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [[ -n "$unformatted" ]]; then
+            echo "::error::Not formatted with gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
 
-      - name: Ruff (lint)
-        run: ruff check --output-format=github app tests
+      - name: go vet
+        run: go vet ./...
 
-      - name: Ruff (format)
-        run: ruff format --check app tests
+      - name: Tests (race detector)
+        run: go test -race -cover ./...
 
-  test:
-    name: Unit tests (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v7
+      # Built from source with the Go version above: a prebuilt binary may be older than go.mod's Go.
+      - uses: golangci/golangci-lint-action@v9
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: requirements*.txt
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          install-mode: goinstall
 
-      - run: pip install -r requirements-dev.txt
+      - name: govulncheck
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
 
-      # Fails under 95 % coverage (see [tool.coverage.report] in pyproject.toml)
-      - name: Pytest
-        run: pytest --cov --cov-report=term --cov-report=xml
-
-      - name: Upload coverage report
-        if: matrix.python-version == '3.13'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage.xml
+      - name: Build
+        run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/uptime-kuma-api
 
   e2e:
-    name: End-to-end (Uptime Kuma ${{ matrix.kuma-version }})
-    needs: [lint, test]
+    name: Acceptance tests (Uptime Kuma ${{ matrix.kuma-version }})
+    needs: go
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # Oldest supported, newest officially supported by uptime-kuma-api, latest 1.x
-        kuma-version: ["1.21.3", "1.23.2", "1"]
+        # Oldest 2.x release, newest 2.x release, moving 2.x tag
+        kuma-version: ["2.0.0", "2.5.11", "2"]
     env:
       KUMA_VERSION: ${{ matrix.kuma-version }}
       KUMA_USERNAME: ci-kuma-user
       KUMA_PASSWORD: Ci-kuma-password-1!
       ADMIN_PASSWORD: ci-admin-password
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: requirements*.txt
+          cache-dependency-path: tests/e2e/requirements.txt
 
-      - run: pip install -r requirements-dev.txt
+      - run: pip install -r tests/e2e/requirements.txt
 
-      # Builds the image from the Dockerfile and waits for both health checks
+      # Builds the API image from the Dockerfile and waits for both health checks
       - name: Start Uptime Kuma and the API
         run: docker compose up -d --build --wait
 
       - name: Create the Uptime Kuma user
         run: python tests/e2e/setup_kuma.py http://127.0.0.1:3001
 
-      - name: Run the end-to-end tests
+      - name: Run the acceptance tests
         env:
           E2E_API_URL: http://127.0.0.1:8000
           E2E_ADMIN_PASSWORD: ${{ env.ADMIN_PASSWORD }}
-        run: pytest tests/e2e -v
+        run: python -m pytest tests/e2e -v
 
       - name: Container logs
         if: failure()
@@ -115,15 +106,12 @@ jobs:
 
   docker:
     name: Docker image
-    needs: [lint, test, e2e]
+    needs: [go, e2e]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      # Emulation for the arm64 build
-      - uses: docker/setup-qemu-action@v4
-
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       # Images are published from main (edge) and develop (dev) only.
       # Releases are published by release.yml.
@@ -151,6 +139,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # Cross-compiled in the build stage: no emulation needed for arm64
       - name: Build (and push) the multi-arch image
         uses: docker/build-push-action@v7
         with:
@@ -158,5 +147,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{ steps.publish.outputs.push == 'true' }}
           tags: ${{ steps.publish.outputs.tags }}
+          build-args: VERSION=3.0.0-dev+${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
