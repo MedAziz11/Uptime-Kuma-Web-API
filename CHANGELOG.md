@@ -16,10 +16,11 @@ full list of differences from 2.0: [docs/migration-2-to-3.md](docs/migration-2-t
 - **Docker image**: one static binary on distroless, no shell; `ENTRYPOINT ["/uptime-kuma-api"]`
   instead of uvicorn; the health check is `/uptime-kuma-api healthcheck`. It runs as uid 100,
   gid 101 like 2.0, so the `/db` volume is reused as it is.
-- **Image tags** have no `v` prefix: `3.0.0`, `3.0`, `3`, `latest`; a release candidate only gets
-  its own tag (`3.0.0-rc.1`).
+- **Image tags**: `v3.0.0`, `v3.0`, `v3`, `latest`, as for 2.x; a release candidate only gets its
+  own tag (`v3.0.0-rc.1`).
 - `POST /settings/upload_backup` always answers `410 Gone`: Uptime Kuma 2.x has no backup import.
-- `POST /monitors` uses the defaults of Uptime Kuma 2.x's UI (`maxretries` 0, `timeout` 48, ...).
+- `POST /monitors` uses the defaults of Uptime Kuma 2.0.0's UI (`maxretries` 0, `timeout` 48, ...);
+  fields added by later Uptime Kuma releases get the database default unless the request sets them.
 - Request bodies are checked for their JSON types: `"5"` for an integer or `0`/`1` for a boolean
   are 422. Fields the API does not document are passed on to Uptime Kuma.
 - Error texts differ from 2.0 (status codes and shapes do not). Raw JavaScript or SQL errors of
@@ -36,6 +37,8 @@ full list of differences from 2.0: [docs/migration-2-to-3.md](docs/migration-2-t
   `If-None-Match` answers `304`.
 - `LISTEN_ADDR` (default `:8000`).
 - `503` with `Retry-After` when too many logins run at once or the API is still starting.
+- `501` with the minimum Uptime Kuma version for the incident history routes on Uptime Kuma before
+  2.1.0; `400` naming the field when a monitor field is newer than the Uptime Kuma server.
 - The image carries an SBOM and provenance attestation.
 
 ### Changed
@@ -54,8 +57,8 @@ full list of differences from 2.0: [docs/migration-2-to-3.md](docs/migration-2-t
 
 ### Known limitations
 
-- On Uptime Kuma 2.0.0, creating a monitor and reading the incident history fail; the acceptance
-  suite passes on 2.5.11.
+- The incident history, edit, delete and resolve routes need Uptime Kuma 2.1.0 or later. The
+  acceptance suite passes on Uptime Kuma 2.0.0 (that test skipped), 2.4.0, 2.5.0 and 2.5.11.
 
 ## [2.0.0] - 2026-11-12
 

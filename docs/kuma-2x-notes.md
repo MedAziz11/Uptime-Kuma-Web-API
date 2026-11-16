@@ -109,7 +109,8 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 | Notification options the API does not document | 422 `unknown argument` (uptime-kuma-api 1.2.1's list of provider options) | passed on to Kuma, which stores them | A static list lags behind Kuma's providers (§6); the acceptance suite asserts the pass-through |
 | Documented fields of notifications, proxies, docker hosts | not type-checked | type-checked (422) | §6 |
 | `PATCH /notifications/{id}` changing `type` | dropped the old provider's options | keeps them | No per-provider option list for 2.x |
-| `POST /monitors` defaults | uptime-kuma-api's (`maxretries` 1, ...) | Kuma 2.x UI's (`defaults.go`: `maxretries` 0, `timeout` 48, per-type ports, ...) | 2.0 could not create monitors on 2.x at all |
+| `POST /monitors` defaults | uptime-kuma-api's (`maxretries` 1, ...) | the fields Kuma 2.0.0's UI sends (`defaults.go`: `maxretries` 0, `timeout` 48, per-type ports, ...); later fields get the database default | 2.0 could not create monitors on 2.x at all; see "Older 2.x releases" |
+| Command an older Kuma does not have (incident history, edit, delete, resolve before 2.1.0) | — | `501` with the minimum version in `detail` | see "Older 2.x releases" |
 | Monitor types, `accepted_statuscodes` | 1.23's types; codes 100–999 | also 2.x's types (`websocket-upgrade`, `snmp`, ...) and codes 1000–4999 (WebSocket close codes) | |
 | `GET /ping`, `/uptime`, `/cert_info` | waited up to 2 s for pushes; kept deleted monitors | the pushed state at once; deleted monitors removed | |
 | `GET /monitors/{id}` | `getMonitor` | the pushed monitor list (same fields; `path` and `pathName` filled in) | |
@@ -218,6 +219,47 @@ Observed on 2.5.11 for these resources:
 - `getMonitorChartData`, `monitorImportantHeartbeatListCount` and `...Paged` answer success with
   empty or zero data for an unknown monitor (`TestRealKumaChartOfUnknownMonitor`); the routes
   answer 404 from State. The chart is by minute up to 24 hours, by hour up to 720, else by day.
+
+## Older 2.x releases (phase 6)
+
+The recordings are from 2.5.11. The API also works with older 2.x releases; the acceptance suite
+passes on fresh instances of 2.0.0 (incident history skipped), 2.4.0, 2.5.0 and on 2.5.11. What
+differs, read in the sources of each release (`server/server.js`, `server/socket-handlers/`,
+`src/pages/EditMonitor.vue`, `db/knex_migrations/`) and seen on the instances:
+
+- **Monitor defaults.** `add` passes the object to `bean.import`, which stores every key as a
+  column: a field whose column a later migration added fails on an older server with
+  `table monitor has no column named ...` (SQLite) or `Unknown column` (MariaDB). The defaults
+  of 2.5.11's UI failed on 2.0.0 (`bearer_token`), 2.4.0 (`ntp_root_dispersion_threshold`) and
+  2.5.0 (`ssh_auth_method`). `defaults.go` now holds only the fields 2.0.0's add-monitor form sends
+  (its `monitorDefaults`, `init()` and the watch on `monitor.type`). Every monitor column added
+  between 2.0.0 and 2.5.11 is nullable or has a database default (`domain_expiry_notification`
+  0, `save_error_response` true, `response_max_length` 1024, `screenshot_delay` 0,
+  `retry_only_on_status_code_failure` false, `ntp_*` 5/1000/500, `ssh_auth_method` password,
+  others null or empty), and 2.5.11's `add` and `Monitor.validate()` read none of them without a
+  guard, so a monitor created without them is valid on every release. `editMonitor` assigns the
+  fields it knows one by one, and the API sends it the monitor as that server pushed it, so edits
+  match the server's schema; a field the server does not know is ignored there.
+  The API maps the "no column" error of `add` to `400 this Uptime Kuma has no field "<column>"`.
+  No other resource has API-side defaults from 2.5 (API keys: `active` and `expires`, which 2.0.0
+  has).
+- **Commands.** Of the commands the API sends, only these are missing in 2.0.0 (present from
+  2.1.0): `getIncidentHistory`, `editIncident`, `deleteIncident`, `resolveIncident`. 2.0.0 never
+  acks an unknown event, so the call would end at `KUMA_TIMEOUT` (504). `internal/kuma/versions.go`
+  holds the minimum version of each such command; the client compares it with the version in
+  the `info` pushed at the login and the route answers `501 Not Implemented` at once:
+  `Uptime Kuma 2.0.0 does not support getIncidentHistory: it needs Uptime Kuma 2.1.0 or later`.
+  A pre-release counts as its release; an unknown or unparsable version sends the command.
+- **Monitor tags.** Before 2.1.0, `addMonitorTag` and `deleteMonitorTag` push nothing; the API
+  fetches the monitor list again after them on such a server.
+- **Public status page.** Before 2.1.0 it has the pinned incident as `incident` instead of the list
+  `incidents`; both are read. Its response cache (5 minutes, keyed by URL) is cleared by no incident
+  command, and before 2.5.9 (apicache with `respectCacheControl: false`) ignores
+  `Cache-Control: no-cache`; the `response-cache` of 2.5.9 and later honours it. The API adds the number of
+  incident commands it sent to the URL (`?incidents=N`), so the read after one misses the cache on
+  every release.
+- **Status page analytics.** Before 2.1.0 `saveStatusPage` reads `googleAnalyticsId`; from 2.1.0
+  `analyticsId` and `analyticsType`. The API sends all three.
 
 ## Known limitations
 

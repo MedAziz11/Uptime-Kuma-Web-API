@@ -10,8 +10,8 @@ with security fixes only.
 - **Uptime Kuma must be 2.x.** 3.0 does not work with Uptime Kuma 1.x, and 2.0 cannot create
   monitors on Uptime Kuma 2.x. Upgrade Uptime Kuma first (with its own backup and migration), then
   the API.
-- **Use a current Uptime Kuma 2.x release.** The acceptance suite passes on 2.5.11. On 2.0.0,
-  creating a monitor and reading the incident history fail (see [Known limitations](#known-limitations)).
+- Any Uptime Kuma 2.x release works; the acceptance suite passes on 2.0.0, 2.4.0, 2.5.0 and
+  2.5.11. A few features need a newer one, see [Uptime Kuma versions](#uptime-kuma-versions).
 - **Back up the `/db` volume**, e.g.
   `docker run --rm -v <volume>:/db:ro -v "$PWD":/backup alpine tar czf /backup/api-db.tgz -C /db .`
 - The Uptime Kuma account must still not have two-factor authentication enabled.
@@ -19,8 +19,7 @@ with security fixes only.
 ## Upgrade (Docker)
 
 1. Change the image tag from `medaziz11/uptimekuma_restapi:v2.0.0` (or `v2`, `latest`) to
-   `medaziz11/uptimekuma_restapi:3.0.0-rc.1` (`3` once 3.0.0 is released). 3.x tags have no `v`
-   prefix.
+   `medaziz11/uptimekuma_restapi:v3.0.0-rc.1` (`v3` once 3.0.0 is released).
 2. Keep the environment variables and the `/db` volume (or bind mount) as they are.
 3. Start the container. `GET /health` answers `{"status":"ok","version":"3.0.0-rc.1"}`.
 
@@ -46,7 +45,7 @@ What changes in the deployment:
 | `HEALTHCHECK` with `python -c ...` | `HEALTHCHECK` with `/uptime-kuma-api healthcheck` | Health checks defined outside the image: use `/uptime-kuma-api healthcheck` or `GET /health` |
 | Settings also read from a `.env` file in the working directory | environment variables only | Pass the variables to the container (`env_file:` in compose) |
 | Access log by uvicorn (text) | JSON lines on standard error (`slog`) | Adjust log parsing |
-| Image tags `v2.0.0`, `v2.0`, `v2` | `3.0.0`, `3.0`, `3`; a release candidate only gets its own tag | Pin `3` or an exact version |
+| Image tags `v2.0.0`, `v2.0`, `v2` | `v3.0.0`, `v3.0`, `v3`; a release candidate only gets its own tag (`v3.0.0-rc.1`) | Pin `v3` or an exact version |
 | Images for amd64 and arm64 | same | — |
 
 ## Rollback
@@ -67,7 +66,7 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 | ---- | --- | --- | ------------------------- |
 | `POST /settings/upload_backup` | 504 on Uptime Kuma 2.x (422 for a bad `import_handle`) | always `410 Gone` | Stop calling it: Uptime Kuma 2.x removed backup import |
 | New routes | — | `/api_keys`, `/remote_browsers`, `/push_examples/{language}`, `/monitors/{id}/chart`, `/monitors/{id}/important_beats`, `/statuspages/{slug}/incidents` (history, edit, delete, resolve) | Nothing; see `/docs` |
-| `POST /monitors` defaults | uptime-kuma-api's (`maxretries` 1, ...) | Uptime Kuma 2.x UI's (`maxretries` 0, `timeout` 48, per-type ports, ...) | Send the fields you depend on explicitly |
+| `POST /monitors` defaults | uptime-kuma-api's (`maxretries` 1, ...) | the fields Uptime Kuma 2.0.0's UI sends (`maxretries` 0, `timeout` 48, per-type ports, ...); fields added by later releases get the database default | Send the fields you depend on explicitly |
 | Monitor types, `accepted_statuscodes` | 1.23's types; codes 100–999 | also 2.x's types (`websocket-upgrade`, `snmp`, ...) and codes 1000–4999 | Nothing |
 | `timeout` of a monitor | integer | number | Nothing (decimals are accepted) |
 | `GET /monitors/{id}` | `getMonitor` | the pushed monitor list (same fields; `path` and `pathName` filled in) | Nothing |
@@ -114,13 +113,41 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 | `/openapi.json` content type | `application/json` | `application/openapi+json` | Accept both |
 | `/docs` content type | `text/html; charset=utf-8` | `text/html` | Nothing |
 
+## Uptime Kuma versions
+
+3.x works with every Uptime Kuma 2.x release. The acceptance suite passes on 2.0.0, 2.4.0, 2.5.0
+and 2.5.11 (on 2.0.0 the incident history test is skipped).
+
+- **Commands an older release lacks** answer `501 Not Implemented` at once, with a `detail` naming
+  the server's version and the minimum one, e.g. `Uptime Kuma 2.0.0 does not support
+  getIncidentHistory: it needs Uptime Kuma 2.1.0 or later`. Checked in the sources of 2.0.0 to
+  2.3.0 for every command the API sends:
+
+  | Routes | Uptime Kuma command | From |
+  | ------ | ------------------- | ---- |
+  | `GET /statuspages/{slug}/incidents`, `PATCH /statuspages/{slug}/incidents/{id}` | `getIncidentHistory`, `editIncident` | 2.1.0 |
+  | `DELETE /statuspages/{slug}/incidents/{id}` | `deleteIncident` | 2.1.0 |
+  | `POST /statuspages/{slug}/incidents/{id}/resolve` | `resolveIncident` | 2.1.0 |
+
+  Every other command the API sends exists in 2.0.0.
+- **Monitor fields.** `POST /monitors` adds only the fields Uptime Kuma 2.0.0's UI sends. Fields
+  that later releases added (`bearer_token`, `gamedigToken`, `domainExpiryNotification`,
+  `saveResponse`, the `ntp*` and `ssh*` fields, ...) get the default of the server's database when
+  the request does not set them: on 2.5.11, for example, `domain_expiry_notification` is off,
+  where Uptime Kuma's UI would set it on.
+  - A field the server does not have yet, set in `POST /monitors`: `400` with
+    `this Uptime Kuma has no field "bearer_token": it was added by a later Uptime Kuma release`.
+  - The same field in `PATCH /monitors/{id}`: Uptime Kuma's `editMonitor` copies the fields it
+    knows and ignores the rest, so the answer is `200` and the field is not stored.
+- Before 2.1.0, Uptime Kuma pushes nothing after adding or removing a monitor's tag; the API reads
+  the monitor list again, so `GET /monitors/{id}` shows the change.
+- Before 2.1.0, the public status page has one pinned incident (`incident`) instead of a list;
+  `GET /statuspages/{slug}` answers the same `incident` on every release.
+- Before 2.1.0 there are no `analyticsId`/`analyticsType` on status pages; `googleAnalyticsId`
+  is sent under both names.
+
 ## Known limitations
 
-- **Uptime Kuma 2.0.0**: creating a monitor fails with 400 (`table monitor has no column named
-  bearer_token` in the API's log) and `GET /statuspages/{slug}/incidents` answers 504 (2.0.0 has no
-  `getIncidentHistory`). The monitor defaults are those of Uptime Kuma 2.5's UI; according to the
-  Uptime Kuma sources, they need columns added in 2.4.0 (`bearer_token`, `gamedig_token`) and 2.5.0
-  (`ntp_*`), and the incident history exists from 2.1.0. Only 2.0.0 and 2.5.11 were tested.
 - The status page list (`GET /statuspages`) is pushed by Uptime Kuma only at login. Changes made by
   the API are applied at once; changes made in Uptime Kuma's UI show after the API's next
   reconnect.
@@ -131,6 +158,9 @@ The rule: 3.0 reproduces 2.0's routes, status codes and response shapes. It does
 - `GET /statuspages/{slug}/incidents` passes Uptime Kuma's paging through: incidents created in the
   same second as the last one of a page are not returned on the next page.
 - `checkDomain` (domain expiry lookups) is not exposed.
+- Before Uptime Kuma 2.5.9, Uptime Kuma's 5-minute cache of the public status page ignores
+  `Cache-Control: no-cache`: incident changes made through the API show at once, changes made in
+  Uptime Kuma's UI can take up to 5 minutes to show in `GET /statuspages/{slug}`.
 - Performance: the p99 target of 2 ms for `GET /monitors` with full 532 kB bodies at 5,000 req/s
   is not met on the test machine (2.8 to 17.1 ms); see [performance.md](performance.md).
 

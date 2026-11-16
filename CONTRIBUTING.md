@@ -81,8 +81,8 @@ The design is in [docs/architecture.md](docs/architecture.md); what Uptime Kuma 
 
 The `Release` workflow (tags `v3.*`) checks that the tag is `v3.X.Y` or `v3.X.Y-rc.N` and has a
 `CHANGELOG.md` section, runs the tests, builds the image for amd64 and arm64 with the version set
-from the tag, pushes it with an SBOM and provenance (`X.Y.Z`, `X.Y`, `X`, `latest`; a release
-candidate only `X.Y.Z-rc.N`) and creates the GitHub release (a pre-release for `-rc.N`).
+from the tag, pushes it with an SBOM and provenance (`vX.Y.Z`, `vX.Y`, `vX`, `latest`; a release
+candidate only `vX.Y.Z-rc.N`) and creates the GitHub release (a pre-release for `-rc.N`).
 
 It needs the repository secrets `DOCKER_USERNAME` and `DOCKER_PASSWORD` (a Docker Hub access token).
 The image name can be overridden with the repository variables `DOCKERHUB_REPO` and

@@ -20,9 +20,11 @@ differences are listed in the [migration guide](docs/migration-2-to-3.md).
 | 2.x (branch [`2.x`](https://github.com/MedAziz11/Uptime-Kuma-Web-API/tree/2.x), Python) | 1.21.3 – 1.23.x | security fixes only |
 | 1.x | 1.x | not supported |
 
-The acceptance suite passes against Uptime Kuma 2.5.11. CI also runs it against 2.0.0 and the
-moving `2` tag. On Uptime Kuma 2.0.0, creating a monitor and reading the incident history fail
-(see [Known limitations](docs/migration-2-to-3.md#known-limitations)); use a current 2.x release.
+The acceptance suite passes against Uptime Kuma 2.0.0, 2.4.0, 2.5.0 and 2.5.11; CI runs it
+against 2.0.0, 2.4.0, 2.5.11 and the moving `2` tag. The incident history routes need Uptime Kuma
+2.1.0 or later and answer `501` on an older one. Monitor fields added by a later Uptime Kuma release
+than the server's are refused with `400` naming the field
+([details](docs/migration-2-to-3.md#uptime-kuma-versions)).
 
 ## Quick start
 
@@ -50,7 +52,7 @@ services:
       - uptime-kuma:/app/data
 
   api:
-    image: medaziz11/uptimekuma_restapi:3
+    image: medaziz11/uptimekuma_restapi:v3
     volumes:
       - api:/db
     restart: always
@@ -88,8 +90,8 @@ The [docker-compose.yml](docker-compose.yml) of this repository builds the API f
 | Tag                          | Content                       |
 | ---------------------------- | ----------------------------- |
 | `latest`                     | the latest release            |
-| `3.0.0`, `3.0`, `3`          | a specific release / line     |
-| `3.0.0-rc.1`                 | a release candidate (only this tag) |
+| `v3.0.0`, `v3.0`, `v3`       | a specific release / line     |
+| `v3.0.0-rc.1`                | a release candidate (only this tag) |
 | `v2.0.0`, `v2.0`, `v2`       | the 2.x line (Uptime Kuma 1.x) |
 | `edge`                       | the tip of `main`             |
 | `dev`                        | the tip of `develop`          |
@@ -174,6 +176,7 @@ Errors are returned as `{"detail": "..."}` (422 as `{"detail": [...]}` in FastAP
 | 404    | The monitor, tag, status page... does not exist                |
 | 409    | The username exists                                            |
 | 410    | The route no longer works with Uptime Kuma 2 (backup import)   |
+| 501    | The connected Uptime Kuma is older than the first release with the command (the detail names it) |
 | 422    | Invalid request body or parameters                             |
 | 503    | Uptime Kuma is unreachable or refused the configured credentials; too many logins at once or the API is starting (with `Retry-After`) |
 | 504    | Uptime Kuma did not answer in time                             |
