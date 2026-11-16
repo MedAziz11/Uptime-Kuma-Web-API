@@ -3,7 +3,10 @@ package kuma
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
+
+	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/kuma/kumatest"
 )
 
 // objectField returns a field of the object with id in list l of State.
@@ -83,5 +86,42 @@ func TestClientRemoteBrowsers(t *testing.T) {
 	}
 	if n := k.Counts()["remote browsers"]; n != 0 {
 		t.Fatalf("%d browsers left", n)
+	}
+}
+
+// Incident commands, and the history paged with Kuma's cursor.
+func TestClientIncidents(t *testing.T) {
+	checkLeaks(t)
+	must := mustFor(t)
+	c, _, _ := newClient(t, testTimeout)
+	ctx := context.Background()
+	must(c.AddStatusPage(ctx, "P", "p"))
+	var ids []int64
+	for i := range kumatest.IncidentPageSize + 2 {
+		inc := field[map[string]any](t, must(c.PostIncident(ctx, "p", map[string]any{"title": fmt.Sprint(i), "content": "c", "style": "info"})), "incident")
+		ids = append(ids, int64(inc["id"].(float64)))
+	}
+	first := must(c.IncidentHistory(ctx, "p", ""))
+	if n := len(field[[]any](t, first, "incidents")); n != kumatest.IncidentPageSize || !field[bool](t, first, "hasMore") || field[float64](t, first, "total") != float64(len(ids)) {
+		t.Fatalf("first page %s", first)
+	}
+	second := must(c.IncidentHistory(ctx, "p", field[string](t, first, "nextCursor")))
+	if inc := field[[]map[string]any](t, second, "incidents"); len(inc) != 2 || inc[1]["id"] != float64(ids[0]) || field[bool](t, second, "hasMore") {
+		t.Fatalf("second page %s", second)
+	}
+	edited := must(c.EditIncident(ctx, "p", ids[0], map[string]any{"title": "new", "content": "c2", "style": "danger"}))
+	if inc := field[map[string]any](t, edited, "incident"); inc["title"] != "new" || inc["pin"] != true {
+		t.Fatalf("edit %s", edited)
+	}
+	resolved := must(c.ResolveIncident(ctx, "p", ids[0]))
+	if inc := field[map[string]any](t, resolved, "incident"); inc["active"] != false || inc["pin"] != false {
+		t.Fatalf("resolve %s", resolved)
+	}
+	must(c.DeleteIncident(ctx, "p", ids[0]))
+	if _, err := c.DeleteIncident(ctx, "p", ids[0]); err == nil {
+		t.Fatal("second delete succeeded")
+	}
+	if _, err := c.IncidentHistory(ctx, "nope", ""); err == nil {
+		t.Fatal("history of an unknown page")
 	}
 }

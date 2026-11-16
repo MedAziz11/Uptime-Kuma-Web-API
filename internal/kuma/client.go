@@ -519,6 +519,37 @@ func (c *Client) UnpinIncident(ctx context.Context, slug string) (json.RawMessag
 	return c.s.Call(ctx, "unpinIncident", slug)
 }
 
+// IncidentHistory sends "getIncidentHistory": the incidents of a status
+// page, newest first, one page at a time. cursor is empty for the first
+// page, else the "nextCursor" of the previous one.
+func (c *Client) IncidentHistory(ctx context.Context, slug, cursor string) (json.RawMessage, error) {
+	var arg any // null for the first page
+	if cursor != "" {
+		arg = cursor
+	}
+	return c.readCommand(ctx, "getIncidentHistory", slug, arg)
+}
+
+// Incidents are not part of State: reads go to Uptime Kuma (getIncidentHistory
+// and the public status page), which stores a change before it acks it.
+
+// EditIncident sends "editIncident". Uptime Kuma sets title, content, style
+// and pin from incident.
+func (c *Client) EditIncident(ctx context.Context, slug string, id int64, incident map[string]any) (json.RawMessage, error) {
+	return c.s.Call(ctx, "editIncident", slug, id, incident)
+}
+
+// DeleteIncident sends "deleteIncident".
+func (c *Client) DeleteIncident(ctx context.Context, slug string, id int64) (json.RawMessage, error) {
+	return c.s.Call(ctx, "deleteIncident", slug, id)
+}
+
+// ResolveIncident sends "resolveIncident": the incident becomes inactive
+// and unpinned.
+func (c *Client) ResolveIncident(ctx context.Context, slug string, id int64) (json.RawMessage, error) {
+	return c.s.Call(ctx, "resolveIncident", slug, id)
+}
+
 // Database.
 
 // DatabaseSize sends "getDatabaseSize".

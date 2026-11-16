@@ -263,6 +263,44 @@ def test_status_pages(api: Api, monitor: int):
     api.post("/statuspages", json={"slug": "Bad Slug!", "title": "x"}, expect=400)
 
 
+def test_incidents(api: Api):
+    slug = "e2e-incidents"
+    api.post("/statuspages", json={"slug": slug, "title": "E2E incidents"})
+    try:
+        assert api.get(f"/statuspages/{slug}/incidents") == {
+            "incidents": [],
+            "total": 0,
+            "nextCursor": None,
+            "hasMore": False,
+        }
+        first = api.post(f"/statuspages/{slug}/incident", json={"title": "First", "content": "a"})["id"]
+        second = api.post(f"/statuspages/{slug}/incident", json={"title": "Second", "content": "b"})["id"]
+        history = api.get(f"/statuspages/{slug}/incidents")
+        assert history["total"] == 2
+        assert {i["id"] for i in history["incidents"]} == {first, second}
+
+        edited = api.patch(
+            f"/statuspages/{slug}/incidents/{first}", json={"content": "updated", "style": "danger"}
+        )["incident"]
+        assert (edited["title"], edited["content"], edited["style"]) == ("First", "updated", "danger")
+        incidents = {i["id"]: i for i in api.get(f"/statuspages/{slug}/incidents")["incidents"]}
+        assert incidents[first]["content"] == "updated"
+
+        resolved = api.post(f"/statuspages/{slug}/incidents/{second}/resolve")["incident"]
+        assert (resolved["active"], resolved["pin"]) == (False, False)
+        assert api.get(f"/statuspages/{slug}")["incident"]["id"] == first
+
+        api.delete(f"/statuspages/{slug}/incidents/{second}")
+        assert [i["id"] for i in api.get(f"/statuspages/{slug}/incidents")["incidents"]] == [first]
+        api.delete(f"/statuspages/{slug}/incidents/{second}", expect=404)
+        api.patch(f"/statuspages/{slug}/incidents/{UNKNOWN}", json={"title": "x"}, expect=404)
+        api.post(f"/statuspages/{slug}/incidents/{UNKNOWN}/resolve", expect=404)
+        api.patch(f"/statuspages/{slug}/incidents/{first}", json={"style": "pink"}, expect=422)
+    finally:
+        api.delete(f"/statuspages/{slug}")
+    api.get(f"/statuspages/{slug}/incidents", expect=404)
+
+
 def test_backup_import(api: Api):
     # Uptime Kuma 2.x removed backup import: the route answers 410 Gone.
     backup = {"version": "1.23.0", "notificationList": [], "monitorList": [], "proxyList": []}

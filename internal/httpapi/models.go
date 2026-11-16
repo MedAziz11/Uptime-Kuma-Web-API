@@ -203,6 +203,16 @@ type RemoteBrowserOptions struct {
 	_    struct{} `json:"-" additionalProperties:"true"`
 }
 
+// IncidentUpdate is the body of PATCH /statuspages/{slug}/incidents/{incident_id}.
+// Fields left out keep their value.
+type IncidentUpdate struct {
+	Title   *string  `json:"title,omitempty"`
+	Content *string  `json:"content,omitempty"`
+	Style   *string  `json:"style,omitempty" enum:"info,warning,danger,primary,light,dark"`
+	Pin     *bool    `json:"pin,omitempty"`
+	_       struct{} `json:"-" additionalProperties:"true"`
+}
+
 // The models of the bodies, built once from the types above.
 var (
 	monitorUpdateModel      = modelOf(reflect.TypeFor[MonitorUpdate]())
@@ -221,6 +231,7 @@ var (
 	postIncidentModel       = modelOf(reflect.TypeFor[PostIncidentRequest]())
 	apiKeyModel             = modelOf(reflect.TypeFor[APIKeyOptions]())
 	remoteBrowserModel      = modelOf(reflect.TypeFor[RemoteBrowserOptions]())
+	incidentUpdateModel     = modelOf(reflect.TypeFor[IncidentUpdate]())
 )
 
 // Response bodies, for the OpenAPI document. The objects are Uptime Kuma's,
@@ -431,4 +442,19 @@ type RemoteBrowsers struct {
 // RemoteBrowserResponse is the body of GET /remote_browsers/{remote_browser_id}.
 type RemoteBrowserResponse struct {
 	RemoteBrowser KumaObject `json:"remote_browser"`
+}
+
+// IncidentHistory is the body of GET /statuspages/{slug}/incidents: one page
+// of incidents, newest first.
+type IncidentHistory struct {
+	Incidents  []KumaObject `json:"incidents"`
+	Total      int64        `json:"total" doc:"Incidents of the page in all."`
+	NextCursor *string      `json:"nextCursor" doc:"The cursor of the next page, or null."`
+	HasMore    bool         `json:"hasMore"`
+}
+
+// IncidentSaved is the body of an incident edit or resolution.
+type IncidentSaved struct {
+	Msg      string     `json:"msg"`
+	Incident KumaObject `json:"incident"`
 }

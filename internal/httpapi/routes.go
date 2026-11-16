@@ -216,6 +216,11 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	huma.Register(s.api, reg(post, "/statuspages/{slug}/incident", "post_incident", "Post an incident", "Status Page"), s.postIncident)
 	body(post, "/statuspages/{slug}/incident", "PostIncidentRequest", reflect.TypeFor[PostIncidentRequest]())
 	huma.Register(s.api, reg(del, "/statuspages/{slug}/incident/unpin", "unpin_incident", "Unpin the incident", "Status Page"), s.unpinIncident)
+	huma.Register(s.api, reg(get, "/statuspages/{slug}/incidents", "get_incident_history", "Get the incidents of a status page, newest first", "Status Page"), s.incidentHistory)
+	huma.Register(s.api, reg(patch, "/statuspages/{slug}/incidents/{incident_id}", "update_incident", "Update an incident", "Status Page"), s.updateIncident)
+	body(patch, "/statuspages/{slug}/incidents/{incident_id}", "IncidentUpdate", reflect.TypeFor[IncidentUpdate]())
+	huma.Register(s.api, reg(del, "/statuspages/{slug}/incidents/{incident_id}", "delete_incident", "Delete an incident", "Status Page"), s.deleteIncident)
+	huma.Register(s.api, reg(post, "/statuspages/{slug}/incidents/{incident_id}/resolve", "resolve_incident", "Resolve an incident", "Status Page"), s.resolveIncident)
 
 	// Maintenances.
 	cachedRoute[struct{}, jsonOutput[Maintenances]](s, reg(get, "/maintenance", "get_maintenances", "Get all maintenances", "Maintenance"), s.serveList(s.cache.maintenances))

@@ -48,8 +48,8 @@ type Server struct {
 	statusPages   map[int]Object
 	apiKeys       map[int]Object
 	browsers      map[int]Object
-	groups        map[int][]any // status page id -> public groups
-	incidents     map[int]Object
+	groups        map[int][]any    // status page id -> public groups
+	incidents     map[int][]Object // status page id -> incidents, oldest first
 	beats         map[int][]Object
 	failures      map[string]string
 	noPush        bool
@@ -66,7 +66,7 @@ func New() *Server {
 		monitors: map[int]Object{}, tags: map[int]Object{}, notifications: map[int]Object{},
 		proxies: map[int]Object{}, dockerHosts: map[int]Object{}, maintenances: map[int]Object{},
 		maintMonitors: map[int][]int{}, statusPages: map[int]Object{}, apiKeys: map[int]Object{}, browsers: map[int]Object{}, groups: map[int][]any{},
-		incidents: map[int]Object{}, beats: map[int][]Object{}, failures: map[string]string{},
+		incidents: map[int][]Object{}, beats: map[int][]Object{}, failures: map[string]string{},
 		calls: map[string]int{},
 	}
 	k.Server = siotest.NewServer(siotest.Options{
@@ -338,6 +338,8 @@ func (k *Server) handlers() map[string]handler {
 		"addMonitorMaintenance": k.addMonitorMaintenance,
 		"getStatusPage":         k.getStatusPage, "addStatusPage": k.addStatusPage, "saveStatusPage": k.saveStatusPage,
 		"deleteStatusPage": k.deleteStatusPage, "postIncident": k.postIncident, "unpinIncident": k.unpinIncident,
+		"getIncidentHistory": k.getIncidentHistory, "editIncident": k.editIncident,
+		"deleteIncident": k.deleteIncident, "resolveIncident": k.resolveIncident,
 		"addRemoteBrowser":    k.save(&k.browsers, "remoteBrowserList", "Remote browser not found", browserRow),
 		"deleteRemoteBrowser": k.del(&k.browsers, "remoteBrowserList", "Remote Browser not found"),
 		"testRemoteBrowser": func(ev siotest.Event) (any, func()) {
@@ -893,9 +895,13 @@ func (k *Server) postIncident(ev siotest.Event) (any, func()) {
 		return fail("slug is not found"), nil
 	}
 	id := k.newID()
+	// Kuma stores the date to the second; one second per id here, so that
+	// the history's cursor (a date) tells incidents apart.
 	inc := Object{"id": id, "style": in["style"], "title": in["title"], "content": in["content"], "pin": true,
-		"active": true, "createdDate": "2026-11-13 14:50:00", "lastUpdatedDate": nil, "status_page_id": p["id"]}
-	k.incidents[p["id"].(int)] = inc
+		"active": true, "createdDate": fmt.Sprintf("2026-11-13 %02d:%02d:%02d", id/3600%24, id/60%60, id%60),
+		"lastUpdatedDate": nil, "status_page_id": p["id"]}
+	pid := p["id"].(int)
+	k.incidents[pid] = append(k.incidents[pid], inc)
 	return ok("incident", maps.Clone(inc)), nil
 }
 
@@ -903,9 +909,122 @@ func (k *Server) unpinIncident(ev siotest.Event) (any, func()) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if p := k.pageBySlug(str(ev, 0)); p != nil {
-		delete(k.incidents, p["id"].(int))
+		for _, inc := range k.incidents[p["id"].(int)] {
+			inc["pin"] = false
+		}
 	}
 	return ok(), nil
+}
+
+// IncidentPageSize is how many incidents getIncidentHistory answers at once.
+const IncidentPageSize = 10
+
+// getIncidentHistory pages through the incidents, newest first, with
+// Kuma's cursor: the creation date of the last incident of the page.
+func (k *Server) getIncidentHistory(ev siotest.Event) (any, func()) {
+	cursor := str(ev, 1)
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	p := k.pageBySlug(str(ev, 0))
+	if p == nil {
+		return fail("slug is not found"), nil
+	}
+	all := k.incidents[p["id"].(int)]
+	var older []Object
+	for i := len(all) - 1; i >= 0; i-- {
+		if cursor == "" || all[i]["createdDate"].(string) < cursor {
+			older = append(older, all[i])
+		}
+	}
+	older = older[:min(len(older), IncidentPageSize)]
+	page := []any{}
+	for _, inc := range older {
+		page = append(page, maps.Clone(inc))
+	}
+	// More if an incident is older than the page's last one: not if it was
+	// created in the same second.
+	hasMore, next := false, any(nil)
+	if len(older) > 0 {
+		last := older[len(older)-1]["createdDate"].(string)
+		for _, inc := range all {
+			if inc["createdDate"].(string) < last {
+				hasMore, next = true, last
+			}
+		}
+	}
+	return ok("incidents", page, "total", len(all), "nextCursor", next, "hasMore", hasMore), nil
+}
+
+// IncidentsInOneSecond gives every incident the same creation date, as
+// incidents posted within one second have in Kuma.
+func (k *Server) IncidentsInOneSecond() {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	for _, l := range k.incidents {
+		for _, inc := range l {
+			inc["createdDate"] = "2026-11-13 14:50:00"
+		}
+	}
+}
+
+// incident finds an incident of the page with the slug of argument 0 and
+// the id of argument 1, or returns Kuma's refusal. Called locked.
+func (k *Server) incident(ev siotest.Event) (Object, int, Object) {
+	p := k.pageBySlug(str(ev, 0))
+	if p == nil {
+		return nil, 0, Object{"ok": false, "msg": "slug is not found", "msgi18n": true}
+	}
+	pid := p["id"].(int)
+	for _, inc := range k.incidents[pid] {
+		if inc["id"] == num(ev, 1) {
+			return inc, pid, nil
+		}
+	}
+	return nil, 0, Object{"ok": false, "msg": "Incident not found or access denied", "msgi18n": true}
+}
+
+func (k *Server) editIncident(ev siotest.Event) (any, func()) {
+	in := obj(ev, 2)
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	inc, _, refusal := k.incident(ev)
+	if refusal != nil {
+		return refusal, nil
+	}
+	for _, f := range []string{"title", "content"} {
+		if s, _ := in[f].(string); strings.TrimSpace(s) == "" {
+			return Object{"ok": false, "msg": "Please input " + f, "msgi18n": true}, nil
+		}
+	}
+	style := in["style"]
+	if !slices.Contains([]any{"info", "warning", "danger", "primary", "light", "dark"}, style) {
+		style = "warning"
+	}
+	inc["title"], inc["content"], inc["style"], inc["pin"] = in["title"], in["content"], style, in["pin"] != false
+	inc["lastUpdatedDate"] = "2026-11-13 15:00:00"
+	return ok("msg", "Saved.", "msgi18n", true, "incident", maps.Clone(inc)), nil
+}
+
+func (k *Server) deleteIncident(ev siotest.Event) (any, func()) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	inc, pid, refusal := k.incident(ev)
+	if refusal != nil {
+		return refusal, nil
+	}
+	k.incidents[pid] = slices.DeleteFunc(k.incidents[pid], func(o Object) bool { return o["id"] == inc["id"] })
+	return ok("msg", "successDeleted", "msgi18n", true), nil
+}
+
+func (k *Server) resolveIncident(ev siotest.Event) (any, func()) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	inc, _, refusal := k.incident(ev)
+	if refusal != nil {
+		return refusal, nil
+	}
+	inc["active"], inc["pin"], inc["lastUpdatedDate"] = false, false, "2026-11-13 15:00:00"
+	return ok("msg", "Resolved", "msgi18n", true, "incident", maps.Clone(inc)), nil
 }
 
 // serveHTTP serves GET /api/status-page/{slug}.
@@ -922,9 +1041,12 @@ func (k *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		config := maps.Clone(p)
 		delete(config, "id")
 		delete(config, "domainNameList")
-		incidents := []any{}
-		if inc := k.incidents[p["id"].(int)]; inc != nil {
-			incidents = append(incidents, maps.Clone(inc))
+		incidents := []any{} // pinned and active, newest first
+		all := k.incidents[p["id"].(int)]
+		for i := len(all) - 1; i >= 0; i-- {
+			if all[i]["pin"] == true && all[i]["active"] == true {
+				incidents = append(incidents, maps.Clone(all[i]))
+			}
 		}
 		groups := k.groups[p["id"].(int)]
 		if groups == nil {

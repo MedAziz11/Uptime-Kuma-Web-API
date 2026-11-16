@@ -14,6 +14,20 @@ type (
 	apiKeyIDParam struct {
 		APIKeyID int64 `path:"api_key_id"`
 	}
+	incidentHistoryInput struct {
+		Slug   string `path:"slug"`
+		Cursor string `query:"cursor" doc:"The nextCursor of the previous page; empty for the first page."`
+	}
+	incidentParam struct {
+		Slug       string `path:"slug"`
+		IncidentID int64  `path:"incident_id"`
+	}
+	incidentBodyInput struct {
+		Slug        string `path:"slug"`
+		IncidentID  int64  `path:"incident_id"`
+		ContentType string `header:"Content-Type" hidden:"true"`
+		RawBody     []byte
+	}
 	remoteBrowserIDParam struct {
 		RemoteBrowserID int64 `path:"remote_browser_id"`
 	}
@@ -132,4 +146,102 @@ func (s *Server) deleteRemoteBrowser(ctx context.Context, in *remoteBrowserIDPar
 		return nil, err
 	}
 	return s.answer(ctx)(s.kuma.DeleteRemoteBrowser(ctx, in.RemoteBrowserID))
+}
+
+// Incidents of a status page (not pushed: read from Uptime Kuma).
+
+func (in *incidentBodyInput) body() *bodyInput {
+	return &bodyInput{ContentType: in.ContentType, RawBody: in.RawBody}
+}
+
+// maxIncidentPages bounds the search of an incident in the history.
+const maxIncidentPages = 1000
+
+func (s *Server) incidentHistory(ctx context.Context, in *incidentHistoryInput) (*jsonOutput[IncidentHistory], error) {
+	ack, err := s.kuma.IncidentHistory(ctx, in.Slug, in.Cursor)
+	if err != nil {
+		return nil, s.kumaError(ctx, err)
+	}
+	return replyAs[IncidentHistory](s, ctx, ackBody(ack))
+}
+
+// incident finds an incident in the history of a status page, or answers
+// 404.
+func (s *Server) incident(ctx context.Context, slug string, id int64) (map[string]any, error) {
+	cursor := ""
+	for range maxIncidentPages {
+		ack, err := s.kuma.IncidentHistory(ctx, slug, cursor)
+		if err != nil {
+			return nil, s.kumaError(ctx, err)
+		}
+		var page struct {
+			Incidents  []json.RawMessage `json:"incidents"`
+			NextCursor *string           `json:"nextCursor"`
+			HasMore    bool              `json:"hasMore"`
+		}
+		if err := json.Unmarshal(ack, &page); err != nil {
+			return nil, s.internal(ctx, "read the incident history", err)
+		}
+		for _, raw := range page.Incidents {
+			if iid, ok := idOf(raw); ok && iid == id {
+				inc, _ := decodeObject(raw)
+				return inc, nil
+			}
+		}
+		if !page.HasMore || page.NextCursor == nil || *page.NextCursor == "" {
+			break
+		}
+		cursor = *page.NextCursor
+	}
+	// Uptime Kuma's cursor is a creation date, to the second: the history
+	// ends after its first page when the incidents of the page's end were
+	// created in the same second. The public page lists every pinned,
+	// active incident.
+	pub, err := s.kuma.PublicStatusPage(ctx, slug)
+	if err != nil {
+		return nil, s.kumaError(ctx, err)
+	}
+	var page struct {
+		Incidents []json.RawMessage `json:"incidents"`
+	}
+	_ = json.Unmarshal(pub, &page)
+	for _, raw := range page.Incidents {
+		if iid, ok := idOf(raw); ok && iid == id {
+			inc, _ := decodeObject(raw)
+			return inc, nil
+		}
+	}
+	return nil, errNotFound("incident does not exist")
+}
+
+func (s *Server) updateIncident(ctx context.Context, in *incidentBodyInput) (*jsonOutput[IncidentSaved], error) {
+	changes, aerr := decodeModel(incidentUpdateModel, in.body())
+	if aerr != nil {
+		return nil, aerr
+	}
+	inc, err := s.incident(ctx, in.Slug, in.IncidentID)
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(inc, changes)
+	if aerr := missingArguments(inc, "title", "content"); aerr != nil {
+		return nil, aerr
+	}
+	ack, err := s.kuma.EditIncident(ctx, in.Slug, in.IncidentID, inc)
+	if err != nil {
+		return nil, s.kumaError(ctx, err)
+	}
+	return replyAs[IncidentSaved](s, ctx, ackBody(ack))
+}
+
+func (s *Server) deleteIncident(ctx context.Context, in *incidentParam) (*jsonOutput[KumaMessage], error) {
+	return s.answer(ctx)(s.kuma.DeleteIncident(ctx, in.Slug, in.IncidentID))
+}
+
+func (s *Server) resolveIncident(ctx context.Context, in *incidentParam) (*jsonOutput[IncidentSaved], error) {
+	ack, err := s.kuma.ResolveIncident(ctx, in.Slug, in.IncidentID)
+	if err != nil {
+		return nil, s.kumaError(ctx, err)
+	}
+	return replyAs[IncidentSaved](s, ctx, ackBody(ack))
 }

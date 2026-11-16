@@ -171,3 +171,86 @@ func TestRemoteBrowserRoutes(t *testing.T) {
 		{"deleteRemoteBrowser", "DELETE", fmt.Sprintf("/remote_browsers/%d", bid), ""},
 	})
 }
+
+func TestIncidentRoutes(t *testing.T) {
+	e := newEnv(t, Options{})
+	e.ok(t, "POST", "/statuspages", `{"slug":"page","title":"Page"}`)
+	if h := e.ok(t, "GET", "/statuspages/page/incidents", ""); fmt.Sprint(h) != "map[hasMore:false incidents:[] nextCursor:<nil> total:0]" {
+		t.Fatalf("empty history %v", h)
+	}
+	var ids []int
+	for i := range 12 {
+		inc := e.ok(t, "POST", "/statuspages/page/incident", fmt.Sprintf(`{"title":"t%d","content":"c","style":"info"}`, i))
+		ids = append(ids, int(get[float64](t, inc, "id")))
+	}
+	h := e.ok(t, "GET", "/statuspages/page/incidents", "")
+	if len(get[[]any](t, h, "incidents")) != 10 || h["hasMore"] != true || h["total"] != 12.0 {
+		t.Fatalf("history %v", h)
+	}
+	h2 := e.ok(t, "GET", "/statuspages/page/incidents?cursor="+strings.ReplaceAll(get[string](t, h, "nextCursor"), " ", "%20"), "")
+	if l := get[[]any](t, h2, "incidents"); len(l) != 2 || get[float64](t, l, 1, "id") != float64(ids[0]) {
+		t.Fatalf("second page %v", h2)
+	}
+
+	// The oldest incident is on the second page: PATCH finds it there.
+	path := fmt.Sprintf("/statuspages/page/incidents/%d", ids[0])
+	r := e.ok(t, "PATCH", path, `{"content":"updated","pin":false}`)
+	if r["msg"] != "Saved." || get[string](t, r, "incident", "title") != "t0" || get[string](t, r, "incident", "content") != "updated" ||
+		get[string](t, r, "incident", "style") != "info" || get[bool](t, r, "incident", "pin") {
+		t.Fatalf("patch %v", r)
+	}
+	newest := fmt.Sprintf("/statuspages/page/incidents/%d", ids[11])
+	if get[float64](t, e.ok(t, "GET", "/statuspages/page", ""), "incident", "id") != float64(ids[11]) {
+		t.Fatal("newest pinned incident not shown")
+	}
+	r = e.ok(t, "POST", newest+"/resolve", "")
+	if r["msg"] != "Resolved" || get[bool](t, r, "incident", "active") || get[bool](t, r, "incident", "pin") {
+		t.Fatalf("resolve %v", r)
+	}
+	if get[float64](t, e.ok(t, "GET", "/statuspages/page", ""), "incident", "id") != float64(ids[10]) {
+		t.Fatal("resolved incident still shown")
+	}
+	if r := e.ok(t, "DELETE", newest, ""); r["msg"] != "Deleted Successfully." {
+		t.Fatalf("delete %v", r)
+	}
+	if get[float64](t, e.ok(t, "GET", "/statuspages/page/incidents", ""), "total") != 11 {
+		t.Fatal("delete not visible")
+	}
+
+	// Created in one second, only the first page of the history is
+	// reachable; a pinned incident beyond it is found on the public page.
+	e.kuma.IncidentsInOneSecond()
+	if h := e.ok(t, "GET", "/statuspages/page/incidents", ""); h["hasMore"] != false || len(get[[]any](t, h, "incidents")) != 10 {
+		t.Fatalf("history in one second %v", h)
+	}
+	oldest := fmt.Sprintf("/statuspages/page/incidents/%d", ids[1])
+	if r := e.ok(t, "PATCH", oldest, `{"title":"found"}`); get[string](t, r, "incident", "title") != "found" {
+		t.Fatalf("patch beyond the history %v", r)
+	}
+	// ids[0] is unpinned: not on the public page either.
+	if status, _ := e.call(t, "PATCH", path, `{}`); status != 404 {
+		t.Fatalf("unpinned incident beyond the history: %d", status)
+	}
+
+	e.checkErrors(t, []errorCase{
+		{"GET", "/statuspages/nope/incidents", "", 404, "slug is not found"},
+		{"PATCH", "/statuspages/nope/incidents/1", `{}`, 404, "slug is not found"},
+		{"PATCH", "/statuspages/page/incidents/99999", `{}`, 404, "incident does not exist"},
+		{"DELETE", "/statuspages/page/incidents/99999", "", 404, "Incident not found or access denied"},
+		{"POST", "/statuspages/page/incidents/99999/resolve", "", 404, "Incident not found or access denied"},
+		{"DELETE", "/statuspages/nope/incidents/1", "", 404, "slug is not found"},
+		{"PATCH", "/statuspages/page/incidents/x", `{}`, 422, "int_parsing path.incident_id"},
+		{"PATCH", oldest, `{"style":"pink"}`, 422, "enum body.style"},
+		{"PATCH", oldest, `{"pin":"no"}`, 422, "bool_parsing body.pin"},
+		{"PATCH", oldest, `{"title":null}`, 422, "missing 1 required argument: 'title'"},
+		{"PATCH", oldest, `{"title":" "}`, 400, "Please input title"},
+		{"PATCH", path, `[]`, 422, "model_attributes_type body"},
+	})
+	e.checkKumaFailures(t, []struct{ event, method, path, body string }{
+		{"getIncidentHistory", "GET", "/statuspages/page/incidents", ""},
+		{"getIncidentHistory", "PATCH", oldest, `{}`},
+		{"editIncident", "PATCH", oldest, `{}`},
+		{"deleteIncident", "DELETE", path, ""},
+		{"resolveIncident", "POST", path + "/resolve", ""},
+	})
+}
