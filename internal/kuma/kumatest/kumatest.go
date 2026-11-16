@@ -320,7 +320,9 @@ func (k *Server) handlers() map[string]handler {
 	return map[string]handler{
 		"add": k.add, "getMonitor": k.getMonitor, "editMonitor": k.editMonitor, "deleteMonitor": k.deleteMonitor,
 		"pauseMonitor": k.setActive(false), "resumeMonitor": k.setActive(true), "getMonitorBeats": k.getMonitorBeats,
-		"addMonitorTag": k.addMonitorTag, "deleteMonitorTag": k.deleteMonitorTag, "getMonitorList": k.getMonitorList,
+		"getMonitorChartData": k.getMonitorChartData, "monitorImportantHeartbeatListCount": k.importantCount,
+		"monitorImportantHeartbeatListPaged": k.importantPaged,
+		"addMonitorTag":                      k.addMonitorTag, "deleteMonitorTag": k.deleteMonitorTag, "getMonitorList": k.getMonitorList,
 		"getTags": k.getTags, "addTag": k.addTag, "editTag": k.editTag, "deleteTag": k.deleteTag,
 		"addNotification":    k.save(&k.notifications, "notificationList", "notification not found", notificationRow),
 		"deleteNotification": k.del(&k.notifications, "notificationList", "notification not found"),
@@ -484,6 +486,46 @@ func (k *Server) getMonitorBeats(ev siotest.Event) (any, func()) {
 	data := []any{}
 	for i, b := range k.beats[id] {
 		data = append(data, Object{"id": i + 1, "important": 1, "monitor_id": id, "status": b["status"], "msg": b["msg"], "time": b["time"], "ping": b["ping"], "duration": 0, "down_count": 0, "end_time": b["time"], "retries": 0, "response": nil})
+	}
+	return ok("data", data), nil
+}
+
+// getMonitorChartData answers one point per heartbeat. Kuma answers an
+// unknown monitor with an empty series.
+func (k *Server) getMonitorChartData(ev siotest.Event) (any, func()) {
+	if string(arg(ev, 1)) == "null" {
+		return fail("Invalid period."), nil
+	}
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	data := []any{}
+	for i, b := range k.beats[num(ev, 0)] {
+		up := 0
+		if b["status"] == 1 {
+			up = 1
+		}
+		data = append(data, Object{"up": up, "down": 1 - up, "avgPing": b["ping"], "minPing": b["ping"], "maxPing": b["ping"], "timestamp": 1794581340 + 60*i})
+	}
+	return ok("data", data), nil
+}
+
+// The heartbeats of the fake are all important.
+
+func (k *Server) importantCount(ev siotest.Event) (any, func()) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	return ok("count", len(k.beats[num(ev, 0)])), nil
+}
+
+func (k *Server) importantPaged(ev siotest.Event) (any, func()) {
+	id, offset, count := num(ev, 0), num(ev, 1), num(ev, 2)
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	beats := k.beats[id]
+	data := []any{}
+	for i := len(beats) - 1 - offset; i >= 0 && len(data) < count; i-- {
+		b := beats[i]
+		data = append(data, Object{"monitorID": id, "status": b["status"], "time": b["time"], "msg": b["msg"], "ping": b["ping"], "important": 1, "duration": 0, "retries": 0, "response": nil})
 	}
 	return ok("data", data), nil
 }

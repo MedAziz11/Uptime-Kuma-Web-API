@@ -29,6 +29,9 @@ type Kuma interface {
 	PauseMonitor(ctx context.Context, id int64) (json.RawMessage, error)
 	ResumeMonitor(ctx context.Context, id int64) (json.RawMessage, error)
 	MonitorBeats(ctx context.Context, id int64, hours float64) (json.RawMessage, error)
+	MonitorChartData(ctx context.Context, id int64, hours float64) (json.RawMessage, error)
+	ImportantHeartbeatCount(ctx context.Context, id int64) (json.RawMessage, error)
+	ImportantHeartbeats(ctx context.Context, id, offset, count int64) (json.RawMessage, error)
 	AddMonitorTag(ctx context.Context, tagID, monitorID int64, value string) (json.RawMessage, error)
 	DeleteMonitorTag(ctx context.Context, tagID, monitorID int64, value string) (json.RawMessage, error)
 

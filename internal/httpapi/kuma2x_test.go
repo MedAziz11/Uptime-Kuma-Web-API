@@ -1,9 +1,13 @@
 package httpapi
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/kuma"
 )
 
 // errorCase is a request and the answer it must get: a status and a text
@@ -253,4 +257,80 @@ func TestIncidentRoutes(t *testing.T) {
 		{"deleteIncident", "DELETE", path, ""},
 		{"resolveIncident", "POST", path + "/resolve", ""},
 	})
+}
+
+func TestChartAndImportantBeatRoutes(t *testing.T) {
+	e := newEnv(t, Options{})
+	id := int(get[float64](t, e.ok(t, "POST", "/monitors", `{"type":"http","name":"m","url":"http://x"}`), "monitorID"))
+	for i := range 3 {
+		e.kuma.Beat(id, i%2, 10+i)
+	}
+	chart := get[[]any](t, e.ok(t, "GET", fmt.Sprintf("/monitors/%d/chart?period=1.5", id), ""), "chart_data")
+	if len(chart) != 3 || get[float64](t, chart, 1, "up") != 1 || get[float64](t, chart, 1, "avgPing") != 11 {
+		t.Fatalf("chart %v", chart)
+	}
+	if c := get[[]any](t, e.ok(t, "GET", fmt.Sprintf("/monitors/%d/chart", id), ""), "chart_data"); len(c) != 3 {
+		t.Fatalf("default period %v", c)
+	}
+	r := e.ok(t, "GET", fmt.Sprintf("/monitors/%d/important_beats?offset=1&limit=1", id), "")
+	if beats := get[[]any](t, r, "important_beats"); r["total"] != 3.0 || len(beats) != 1 || get[float64](t, beats, 0, "ping") != 11 {
+		t.Fatalf("important beats %v", r)
+	}
+	if r := e.ok(t, "GET", fmt.Sprintf("/monitors/%d/important_beats", id), ""); len(get[[]any](t, r, "important_beats")) != 3 {
+		t.Fatalf("default page %v", r)
+	}
+
+	e.checkErrors(t, []errorCase{
+		{"GET", "/monitors/99999/chart", "", 404, "Not found"},
+		{"GET", "/monitors/99999/important_beats", "", 404, "Not found"},
+		{"GET", fmt.Sprintf("/monitors/%d/chart?period=0", id), "", 422, "greater_than query.period"},
+		{"GET", fmt.Sprintf("/monitors/%d/chart?period=x", id), "", 422, "float_parsing query.period"},
+		{"GET", fmt.Sprintf("/monitors/%d/important_beats?limit=0", id), "", 422, "greater_than_equal query.limit"},
+		{"GET", fmt.Sprintf("/monitors/%d/important_beats?limit=1001", id), "", 422, "less_than_equal query.limit"},
+		{"GET", fmt.Sprintf("/monitors/%d/important_beats?offset=-1", id), "", 422, "greater_than_equal query.offset"},
+		{"GET", "/monitors/x/chart", "", 422, "int_parsing path.monitor_id"},
+	})
+	e.checkKumaFailures(t, []struct{ event, method, path, body string }{
+		{"getMonitorChartData", "GET", fmt.Sprintf("/monitors/%d/chart", id), ""},
+		{"monitorImportantHeartbeatListCount", "GET", fmt.Sprintf("/monitors/%d/important_beats", id), ""},
+		{"monitorImportantHeartbeatListPaged", "GET", fmt.Sprintf("/monitors/%d/important_beats", id), ""},
+	})
+}
+
+// Acks without the expected data are internal errors, not empty answers.
+func TestChartAndImportantBeatsMalformed(t *testing.T) {
+	e := newEnv(t, Options{})
+	id := int(get[float64](t, e.ok(t, "POST", "/monitors", `{"type":"http","name":"m","url":"http://x"}`), "monitorID"))
+	e.srv.kuma = malformedAcks{Client: e.client}
+	for _, path := range []string{"/monitors/%d/chart", "/monitors/%d/important_beats"} {
+		if status, _ := e.call(t, "GET", fmt.Sprintf(path, id), ""); status != 500 {
+			t.Errorf("%s: %d", path, status)
+		}
+	}
+	e.srv.kuma = malformedAcks{Client: e.client, pageOnly: true}
+	if status, _ := e.call(t, "GET", fmt.Sprintf("/monitors/%d/important_beats", id), ""); status != 500 {
+		t.Errorf("malformed page: %d", status)
+	}
+}
+
+// malformedAcks answers {"ok": true} for the chart and heartbeat reads;
+// with pageOnly, only for the page of heartbeats.
+type malformedAcks struct {
+	*kuma.Client
+	pageOnly bool
+}
+
+func (m malformedAcks) MonitorChartData(context.Context, int64, float64) (json.RawMessage, error) {
+	return json.RawMessage(`{"ok":true}`), nil
+}
+
+func (m malformedAcks) ImportantHeartbeatCount(ctx context.Context, id int64) (json.RawMessage, error) {
+	if m.pageOnly {
+		return m.Client.ImportantHeartbeatCount(ctx, id)
+	}
+	return json.RawMessage(`{"ok":true}`), nil
+}
+
+func (m malformedAcks) ImportantHeartbeats(context.Context, int64, int64, int64) (json.RawMessage, error) {
+	return json.RawMessage(`{"ok":true}`), nil
 }

@@ -458,3 +458,26 @@ type IncidentSaved struct {
 	Msg      string     `json:"msg"`
 	Incident KumaObject `json:"incident"`
 }
+
+// ChartData is the body of GET /monitors/{monitor_id}/chart.
+type ChartData struct {
+	ChartData []ChartPoint `json:"chart_data"`
+}
+
+// ChartPoint is the statistics of one minute, hour or day.
+type ChartPoint struct {
+	Up        int64    `json:"up"`
+	Down      int64    `json:"down"`
+	AvgPing   *float64 `json:"avgPing"`
+	MinPing   *float64 `json:"minPing"`
+	MaxPing   *float64 `json:"maxPing"`
+	Timestamp int64    `json:"timestamp" doc:"Start of the period, Unix seconds."`
+	_         struct{} `json:"-" additionalProperties:"true"`
+}
+
+// ImportantBeats is the body of GET /monitors/{monitor_id}/important_beats:
+// the heartbeats that changed the monitor's status, newest first.
+type ImportantBeats struct {
+	ImportantBeats []map[string]any `json:"important_beats"`
+	Total          int64            `json:"total" doc:"Important heartbeats of the monitor in all."`
+}

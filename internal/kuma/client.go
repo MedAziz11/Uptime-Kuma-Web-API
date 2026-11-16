@@ -192,6 +192,24 @@ func (c *Client) MonitorBeats(ctx context.Context, id int64, hours float64) (jso
 	return c.readCommand(ctx, "getMonitorBeats", id, hours)
 }
 
+// MonitorChartData sends "getMonitorChartData": the monitor's aggregated
+// statistics over the last hours (by minute up to 24, by hour up to 720,
+// else by day).
+func (c *Client) MonitorChartData(ctx context.Context, id int64, hours float64) (json.RawMessage, error) {
+	return c.readCommand(ctx, "getMonitorChartData", id, hours)
+}
+
+// ImportantHeartbeatCount sends "monitorImportantHeartbeatListCount".
+func (c *Client) ImportantHeartbeatCount(ctx context.Context, id int64) (json.RawMessage, error) {
+	return c.readCommand(ctx, "monitorImportantHeartbeatListCount", id)
+}
+
+// ImportantHeartbeats sends "monitorImportantHeartbeatListPaged": count
+// important heartbeats of the monitor after the first offset, newest first.
+func (c *Client) ImportantHeartbeats(ctx context.Context, id, offset, count int64) (json.RawMessage, error) {
+	return c.readCommand(ctx, "monitorImportantHeartbeatListPaged", id, offset, count)
+}
+
 // AddMonitorTag sends "addMonitorTag".
 func (c *Client) AddMonitorTag(ctx context.Context, tagID, monitorID int64, value string) (json.RawMessage, error) {
 	return c.write(ctx, Monitors, "addMonitorTag", tagID, monitorID, value)

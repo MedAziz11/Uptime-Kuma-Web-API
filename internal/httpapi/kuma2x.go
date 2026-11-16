@@ -14,6 +14,15 @@ type (
 	apiKeyIDParam struct {
 		APIKeyID int64 `path:"api_key_id"`
 	}
+	chartInput struct {
+		MonitorID int64   `path:"monitor_id"`
+		Period    float64 `query:"period" default:"24" exclusiveMinimum:"0" doc:"Hours, greater than 0: by minute up to 24, by hour up to 720, else by day."`
+	}
+	importantBeatsInput struct {
+		MonitorID int64 `path:"monitor_id"`
+		Offset    int64 `query:"offset" default:"0" minimum:"0"`
+		Limit     int64 `query:"limit" default:"25" minimum:"1" maximum:"1000"`
+	}
 	incidentHistoryInput struct {
 		Slug   string `path:"slug"`
 		Cursor string `query:"cursor" doc:"The nextCursor of the previous page; empty for the first page."`
@@ -244,4 +253,51 @@ func (s *Server) resolveIncident(ctx context.Context, in *incidentParam) (*jsonO
 		return nil, s.kumaError(ctx, err)
 	}
 	return replyAs[IncidentSaved](s, ctx, ackBody(ack))
+}
+
+// Chart data and important heartbeats of a monitor (read from Uptime Kuma;
+// it answers an unknown monitor with empty data, so State is checked first).
+
+func (s *Server) monitorChartData(ctx context.Context, in *chartInput) (*jsonOutput[ChartData], error) {
+	if _, err := s.monitor(ctx, in.MonitorID, "Not found"); err != nil {
+		return nil, err
+	}
+	ack, err := s.kuma.MonitorChartData(ctx, in.MonitorID, in.Period)
+	if err != nil {
+		return nil, s.kumaError(ctx, err)
+	}
+	var got struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(ack, &got); err != nil || got.Data == nil {
+		return nil, s.internal(ctx, "read the chart data", errUnexpected)
+	}
+	return replyAs[ChartData](s, ctx, map[string]any{"chart_data": got.Data})
+}
+
+func (s *Server) importantBeats(ctx context.Context, in *importantBeatsInput) (*jsonOutput[ImportantBeats], error) {
+	if _, err := s.monitor(ctx, in.MonitorID, "Not found"); err != nil {
+		return nil, err
+	}
+	var count struct {
+		Count *int64 `json:"count"`
+	}
+	ack, err := s.kuma.ImportantHeartbeatCount(ctx, in.MonitorID)
+	if err == nil && (json.Unmarshal(ack, &count) != nil || count.Count == nil) {
+		return nil, s.internal(ctx, "read the heartbeat count", errUnexpected)
+	}
+	if err != nil {
+		return nil, s.kumaError(ctx, err)
+	}
+	var page struct {
+		Data json.RawMessage `json:"data"`
+	}
+	ack, err = s.kuma.ImportantHeartbeats(ctx, in.MonitorID, in.Offset, in.Limit)
+	if err != nil {
+		return nil, s.kumaError(ctx, err)
+	}
+	if err := json.Unmarshal(ack, &page); err != nil || page.Data == nil {
+		return nil, s.internal(ctx, "read the heartbeats", errUnexpected)
+	}
+	return replyAs[ImportantBeats](s, ctx, map[string]any{"important_beats": page.Data, "total": *count.Count})
 }

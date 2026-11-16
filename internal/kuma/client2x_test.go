@@ -125,3 +125,26 @@ func TestClientIncidents(t *testing.T) {
 		t.Fatal("history of an unknown page")
 	}
 }
+
+func TestClientChartAndImportantBeats(t *testing.T) {
+	checkLeaks(t)
+	must := mustFor(t)
+	c, k, _ := newClient(t, testTimeout)
+	ctx := context.Background()
+	m, err := NewMonitor(map[string]any{"name": "web", "url": "http://x"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := int64(field[float64](t, must(c.AddMonitor(ctx, m)), "monitorID"))
+	k.Beat(int(id), 1, 20)
+	k.Beat(int(id), 0, nil)
+	if d := field[[]map[string]any](t, must(c.MonitorChartData(ctx, id, 24)), "data"); len(d) != 2 || d[0]["up"] != 1.0 {
+		t.Fatalf("chart %v", d)
+	}
+	if n := field[float64](t, must(c.ImportantHeartbeatCount(ctx, id)), "count"); n != 2 {
+		t.Fatalf("count %v", n)
+	}
+	if d := field[[]map[string]any](t, must(c.ImportantHeartbeats(ctx, id, 1, 5)), "data"); len(d) != 1 || d[0]["status"] != 1.0 {
+		t.Fatalf("paged %v", d)
+	}
+}

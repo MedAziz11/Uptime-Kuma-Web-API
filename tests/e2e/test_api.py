@@ -182,6 +182,17 @@ def test_heartbeats_and_statistics(api: Api, monitor: int):
     assert beats, "the monitor produced no heartbeat within 60 s"
     assert beats[0]["monitor_id"] == monitor
 
+    # The first heartbeat of a monitor is important; it is in the chart too.
+    important = api.get(f"/monitors/{monitor}/important_beats?limit=5")
+    assert important["total"] >= 1
+    assert important["important_beats"][0]["monitorID"] == monitor
+    chart = api.get(f"/monitors/{monitor}/chart?period=1")["chart_data"]
+    assert sum(point["up"] + point["down"] for point in chart) >= 1
+    assert isinstance(api.get(f"/monitors/{monitor}/chart?period=720")["chart_data"], list)
+    api.get(f"/monitors/{UNKNOWN}/chart", expect=404)
+    api.get(f"/monitors/{UNKNOWN}/important_beats", expect=404)
+    api.get(f"/monitors/{monitor}/chart?period=0", expect=422)
+
     assert str(monitor) in api.get("/uptime")
     assert isinstance(api.get("/ping"), dict)
     # No HTTPS monitor exists: an empty answer, not a timeout.

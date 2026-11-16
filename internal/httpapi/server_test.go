@@ -238,6 +238,8 @@ func TestOpenAPIDocument(t *testing.T) {
 		"PATCH /statuspages/{slug}/incidents/{incident_id}":        "update_incident_statuspages__slug__incidents__incident_id__patch",
 		"DELETE /statuspages/{slug}/incidents/{incident_id}":       "delete_incident_statuspages__slug__incidents__incident_id__delete",
 		"POST /statuspages/{slug}/incidents/{incident_id}/resolve": "resolve_incident_statuspages__slug__incidents__incident_id__resolve_post",
+		"GET /monitors/{monitor_id}/chart":                         "monitor_chart_data_monitors__monitor_id__chart_get",
+		"GET /monitors/{monitor_id}/important_beats":               "monitor_important_beats_monitors__monitor_id__important_beats_get",
 	}
 	public := map[string]bool{"GET /health": true, "POST /login/access-token": true}
 	n := 0

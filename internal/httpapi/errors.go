@@ -129,6 +129,15 @@ func errorTransformer(ctx huma.Context, _ string, v any) (any, error) {
 
 // paramIssues maps huma's parameter errors (huma v2.40's messages) to
 // pydantic's error types: "path.monitor_id" becomes ["path", "monitor_id"].
+// bounds are huma's messages for numeric bounds of parameters and
+// pydantic's error for each.
+var bounds = []struct{ op, typ, text, ctx string }{
+	{">", "greater_than", "Input should be greater than ", "gt"},
+	{">=", "greater_than_equal", "Input should be greater than or equal to ", "ge"},
+	{"<", "less_than", "Input should be less than ", "lt"},
+	{"<=", "less_than_equal", "Input should be less than or equal to ", "le"},
+}
+
 func paramIssues(errs []*huma.ErrorDetail) []validationIssue {
 	issues := make([]validationIssue, 0, len(errs))
 	for _, e := range errs {
@@ -142,15 +151,21 @@ func paramIssues(errs []*huma.ErrorDetail) []validationIssue {
 			issue.Type, issue.Msg = "int_parsing", "Input should be a valid integer, unable to parse string as an integer"
 		case e.Message == "invalid float":
 			issue.Type, issue.Msg = "float_parsing", "Input should be a valid number, unable to parse string as a number"
-		case strings.HasPrefix(e.Message, "expected number > "):
-			bound := strings.TrimPrefix(e.Message, "expected number > ")
-			issue.Type, issue.Msg = "greater_than", "Input should be greater than "+bound
-			if f, err := strconv.ParseFloat(bound, 64); err == nil {
-				issue.Ctx = map[string]any{"gt": f}
-			}
-			// pydantic echoes the parameter as it was written.
-			if f, ok := e.Value.(float64); ok {
-				issue.Input = strconv.FormatFloat(f, 'f', -1, 64)
+		case strings.HasPrefix(e.Message, "expected number "):
+			for _, b := range bounds {
+				bound, ok := strings.CutPrefix(e.Message, "expected number "+b.op+" ")
+				if !ok {
+					continue
+				}
+				issue.Type, issue.Msg = b.typ, b.text+bound
+				if f, err := strconv.ParseFloat(bound, 64); err == nil {
+					issue.Ctx = map[string]any{b.ctx: f}
+				}
+				// pydantic echoes the parameter as it was written.
+				if f, ok := e.Value.(float64); ok {
+					issue.Input = strconv.FormatFloat(f, 'f', -1, 64)
+				}
+				break
 			}
 		}
 		issues = append(issues, issue)

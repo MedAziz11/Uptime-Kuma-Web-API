@@ -200,6 +200,8 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	huma.Register(s.api, reg(post, "/monitors/{monitor_id}/pause", "pause_monitor", "Pause a monitor", "Monitor"), s.pauseMonitor)
 	huma.Register(s.api, reg(post, "/monitors/{monitor_id}/resume", "resume_monitor", "Resume a monitor", "Monitor"), s.resumeMonitor)
 	huma.Register(s.api, reg(get, "/monitors/{monitor_id}/beats", "monitor_beats", "Get the heartbeats of a monitor for the last N hours", "Monitor"), s.monitorBeats)
+	huma.Register(s.api, reg(get, "/monitors/{monitor_id}/chart", "monitor_chart_data", "Get the chart data of a monitor for the last N hours", "Monitor"), s.monitorChartData)
+	huma.Register(s.api, reg(get, "/monitors/{monitor_id}/important_beats", "monitor_important_beats", "Get the important heartbeats of a monitor, newest first", "Monitor"), s.importantBeats)
 	huma.Register(s.api, reg(post, "/monitors/{monitor_id}/tag", "add_monitor_tag", "Add an existing tag to a monitor", "Monitor"), s.addMonitorTag)
 	body(post, "/monitors/{monitor_id}/tag", "MonitorTag", reflect.TypeFor[MonitorTag]())
 	huma.Register(s.api, reg(del, "/monitors/{monitor_id}/tag", "delete_monitor_tag", "Remove a tag from a monitor", "Monitor"), s.deleteMonitorTag)

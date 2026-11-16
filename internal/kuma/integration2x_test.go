@@ -101,3 +101,23 @@ func TestRealKumaIncidentHistory(t *testing.T) {
 		t.Fatal("blank title accepted")
 	}
 }
+
+// Chart data and important heartbeats answer an unknown monitor with
+// success and empty data: the API checks State first.
+func TestRealKumaChartOfUnknownMonitor(t *testing.T) {
+	c := realKumaClient(t)
+	ctx := context.Background()
+	must := mustFor(t)
+	if _, ok := objectOf(c.State(), Monitors, 999999); ok {
+		t.Skip("monitor 999999 exists")
+	}
+	if _, err := c.MonitorChartData(ctx, 999999, 24); err != nil {
+		t.Fatalf("chart of an unknown monitor: %v", err)
+	}
+	if n := field[float64](t, must(c.ImportantHeartbeatCount(ctx, 999999)), "count"); n != 0 {
+		t.Fatalf("count %v", n)
+	}
+	if d := field[[]any](t, must(c.ImportantHeartbeats(ctx, 999999, 0, 5)), "data"); len(d) != 0 {
+		t.Fatalf("data %v", d)
+	}
+}
