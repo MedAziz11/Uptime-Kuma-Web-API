@@ -11,5 +11,5 @@ indent_size = 4
 [*.{yml,yaml,json,toml,md}]
 indent_size = 2
 
-[Makefile]
+[{Makefile,*.go}]
 indent_style = tab

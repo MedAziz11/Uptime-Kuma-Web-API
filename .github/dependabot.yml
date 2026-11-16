@@ -1,7 +1,16 @@
 version: 2
 updates:
-  - package-ecosystem: pip
+  - package-ecosystem: gomod
     directory: /
+    schedule:
+      interval: weekly
+    groups:
+      go:
+        patterns: ["*"]
+
+  # The acceptance tests only (tests/e2e)
+  - package-ecosystem: pip
+    directory: /tests/e2e
     schedule:
       interval: weekly
     groups:

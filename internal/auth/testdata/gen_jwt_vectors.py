@@ -1,6 +1,8 @@
 """JWT vectors for the Go tests, produced with 2.0's PyJWT and app.security.
 
-Run from the repository root with the Python 2.0 dependencies installed:
+Run from the root of a checkout of tag v2.0.0 (the Python sources are no
+longer on this branch), with its requirements.txt installed and this script
+copied there:
 
     python internal/auth/testdata/gen_jwt_vectors.py          # writes jwt_vectors.json
     python internal/auth/testdata/gen_jwt_vectors.py --check  # verifies go_tokens.json

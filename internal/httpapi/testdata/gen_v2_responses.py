@@ -1,7 +1,8 @@
 """Records how the 2.0 (Python) API answers the requests of phase 2's routes.
 
-Run from the repository root with the Python 2.0 dependencies installed
-(requirements.txt):
+Run from the root of a checkout of tag v2.0.0 (the Python sources are no
+longer on this branch), with its requirements.txt installed and this script
+copied there:
 
     python internal/httpapi/testdata/gen_v2_responses.py
 

@@ -10,6 +10,10 @@ API_URL = os.environ.get("E2E_API_URL", "").rstrip("/")
 ADMIN_PASSWORD = os.environ.get("E2E_ADMIN_PASSWORD", "")
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line("markers", "e2e: needs a running stack (see tests/e2e/README.md)")
+
+
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     skip = pytest.mark.skip(reason="set E2E_API_URL and E2E_ADMIN_PASSWORD to run")
     for item in items:

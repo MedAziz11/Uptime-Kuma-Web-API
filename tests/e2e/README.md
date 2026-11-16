@@ -1,9 +1,11 @@
 # End-to-end tests
 
-These tests call the API while it is connected to a real Uptime Kuma. They are skipped unless
-`E2E_API_URL` and `E2E_ADMIN_PASSWORD` are set, so a plain `pytest` run never needs Docker.
+These tests call the API while it is connected to a real Uptime Kuma 2. They are the acceptance
+suite of the Go implementation and only use HTTP. They are skipped unless `E2E_API_URL` and
+`E2E_ADMIN_PASSWORD` are set.
 
 ```bash
+pip install -r tests/e2e/requirements.txt
 cp .env.dist .env            # set KUMA_USERNAME, KUMA_PASSWORD, ADMIN_PASSWORD
 make e2e                     # starts the stack, creates the Kuma user, runs the tests, stops the stack
 ```
@@ -14,7 +16,7 @@ Step by step:
 docker compose up -d --build --wait
 set -a; . ./.env; set +a
 python tests/e2e/setup_kuma.py http://127.0.0.1:3001      # first user of a fresh Uptime Kuma
-E2E_API_URL=http://127.0.0.1:8000 E2E_ADMIN_PASSWORD="$ADMIN_PASSWORD" pytest tests/e2e
+E2E_API_URL=http://127.0.0.1:8000 E2E_ADMIN_PASSWORD="$ADMIN_PASSWORD" python -m pytest tests/e2e
 docker compose down -v
 ```
 
@@ -28,4 +30,4 @@ The tests create and delete their own monitors, tags, status pages, ... and leav
 alone, but they are meant for a disposable Uptime Kuma, not a production one.
 
 CI runs them on every push against the Uptime Kuma versions listed in
-`.github/workflows/ci.yml`.
+`.github/workflows/ci.yml` (`KUMA_VERSION` selects the image tag of the compose file).

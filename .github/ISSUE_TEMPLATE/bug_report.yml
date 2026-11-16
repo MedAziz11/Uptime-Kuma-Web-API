@@ -20,7 +20,7 @@ body:
     id: kuma-version
     attributes:
       label: Uptime Kuma version
-      description: Supported versions are 1.21.3 - 1.23.x.
+      description: API 3.x supports Uptime Kuma 2.x; API 2.x supports Uptime Kuma 1.21.3 - 1.23.x.
     validations:
       required: true
   - type: textarea
