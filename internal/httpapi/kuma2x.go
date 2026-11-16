@@ -62,7 +62,7 @@ func apiKeyView(raw json.RawMessage) any {
 	return k
 }
 
-const apiKeyNotFound = "API key does not exist"
+const apiKeyNotFound = "API key does not exist" //nolint:gosec // an error text, not a credential
 
 func (s *Server) createAPIKey(ctx context.Context, in *bodyInput) (*jsonOutput[APIKeyCreated], error) {
 	fields, aerr := decodeDict(apiKeyModel, in)

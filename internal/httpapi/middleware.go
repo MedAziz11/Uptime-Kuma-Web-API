@@ -101,7 +101,7 @@ func withRecovery(log *slog.Logger, next http.Handler) http.Handler {
 			if p == nil {
 				return
 			}
-			if p == http.ErrAbortHandler {
+			if p == http.ErrAbortHandler { //nolint:errorlint // the panic value itself, compared as net/http does
 				panic(p)
 			}
 			log.ErrorContext(r.Context(), "panic serving request",

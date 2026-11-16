@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -314,7 +315,7 @@ func (s *Server) serveObject(c *bodyCache, param, detail string) http.HandlerFun
 }
 
 func writeAPIError(w http.ResponseWriter, err error) {
-	if e, ok := err.(*apiError); ok {
+	if e := (*apiError)(nil); errors.As(err, &e) {
 		writeError(w, e)
 		return
 	}

@@ -141,7 +141,7 @@ func Dial(ctx context.Context, rawURL string, opts Options) (*Conn, error) {
 		queue = defaultQueueSize
 	}
 
-	ws, _, err := websocket.Dial(ctx, u, &websocket.DialOptions{
+	ws, _, err := websocket.Dial(ctx, u, &websocket.DialOptions{ //nolint:bodyclose // coder/websocket owns the response body
 		HTTPClient: opts.HTTPClient,
 		HTTPHeader: opts.Header,
 	})
@@ -170,7 +170,7 @@ func Dial(ctx context.Context, rawURL string, opts Options) (*Conn, error) {
 	c.frames.New = newFrame
 	c.pingTimer = time.AfterFunc(c.pingWindow, func() { c.fail(ErrPingTimeout) })
 	c.wg.Add(2)
-	go c.readLoop()
+	go c.readLoop() //nolint:gosec // lives as long as the connection, not the dial context
 	go c.writeLoop()
 	return c, nil
 }

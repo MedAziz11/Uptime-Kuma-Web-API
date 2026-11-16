@@ -328,7 +328,7 @@ func appendPythonJSONString(dst []byte, s string) []byte {
 			dst = u4(dst, 0xd800|(r>>10)&0x3ff)
 			dst = u4(dst, 0xdc00|r&0x3ff)
 		default:
-			dst = append(dst, byte(r))
+			dst = append(dst, byte(r)) //nolint:gosec // printable ASCII here: 0x20 to 0x7e
 		}
 	}
 	return append(dst, '"')

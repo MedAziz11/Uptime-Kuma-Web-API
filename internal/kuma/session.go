@@ -528,7 +528,7 @@ func jitter(d, limit time.Duration) time.Duration {
 	if d <= 0 {
 		return 0
 	}
-	return min(d+rand.N(d/2+1), limit)
+	return min(d+rand.N(d/2+1), limit) //nolint:gosec // reconnect jitter, not a secret
 }
 
 // connect dials Uptime Kuma, waits until it is ready for commands and logs

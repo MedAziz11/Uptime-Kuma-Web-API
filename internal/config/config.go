@@ -242,7 +242,7 @@ func (p *parser) minutes(name string, def time.Duration) time.Duration {
 	}
 	s, _, _ = strings.Cut(s, ".")
 	n, err := strconv.ParseInt(strings.TrimPrefix(s, "+"), 10, 64)
-	const maxMinutes = int64(math.MaxInt64 / int64(time.Minute))
+	const maxMinutes = math.MaxInt64 / int64(time.Minute)
 	switch {
 	case err == nil && n <= 0:
 		p.invalid(name, fmt.Sprintf("must be greater than 0, got %q", raw))

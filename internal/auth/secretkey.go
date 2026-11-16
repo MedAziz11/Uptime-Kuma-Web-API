@@ -26,7 +26,7 @@ func ResolveSecretKey(fromEnv, dbPath string) (key string, generated bool, err e
 	dir := filepath.Dir(dbPath)
 	path := filepath.Join(dir, SecretKeyFile)
 
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(path) //nolint:gosec // next to DB_PATH, the operator's choice
 	switch {
 	case err == nil:
 		if key := strings.TrimSpace(string(b)); key != "" {
