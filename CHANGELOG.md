@@ -4,6 +4,59 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [3.0.0-rc.1] - 2026-11-16
+
+First release candidate of 3.0, a rewrite in Go for **Uptime Kuma 2.x**. Upgrade guide and the
+full list of differences from 2.0: [docs/migration-2-to-3.md](docs/migration-2-to-3.md).
+
+### Breaking changes
+
+- **Uptime Kuma 2.x is required.** Uptime Kuma 1.x stays supported by the 2.x line (branch `2.x`,
+  security fixes only).
+- **Docker image**: one static binary on distroless, no shell; `ENTRYPOINT ["/uptime-kuma-api"]`
+  instead of uvicorn; the health check is `/uptime-kuma-api healthcheck`. It runs as uid 100,
+  gid 101 like 2.0, so the `/db` volume is reused as it is.
+- **Image tags** have no `v` prefix: `3.0.0`, `3.0`, `3`, `latest`; a release candidate only gets
+  its own tag (`3.0.0-rc.1`).
+- `POST /settings/upload_backup` always answers `410 Gone`: Uptime Kuma 2.x has no backup import.
+- `POST /monitors` uses the defaults of Uptime Kuma 2.x's UI (`maxretries` 0, `timeout` 48, ...).
+- Request bodies are checked for their JSON types: `"5"` for an integer or `0`/`1` for a boolean
+  are 422. Fields the API does not document are passed on to Uptime Kuma.
+- Error texts differ from 2.0 (status codes and shapes do not). Raw JavaScript or SQL errors of
+  Uptime Kuma are logged, not returned.
+- A path no route serves answers 401 without a valid token (was 404).
+- Settings are read from the environment only, no longer from a `.env` file.
+
+### Added
+
+- Routes for Uptime Kuma 2.x resources: `/api_keys`, `/remote_browsers`,
+  `/push_examples/{language}`, `/monitors/{id}/chart`, `/monitors/{id}/important_beats`, incident
+  history, edit, delete and resolve under `/statuspages/{slug}/incidents`.
+- Reads of the lists Uptime Kuma pushes are answered from memory with a strong `ETag`;
+  `If-None-Match` answers `304`.
+- `LISTEN_ADDR` (default `:8000`).
+- `503` with `Retry-After` when too many logins run at once or the API is still starting.
+- The image carries an SBOM and provenance attestation.
+
+### Changed
+
+- One WebSocket connection to Uptime Kuma with concurrent requests; reconnects with backoff and
+  logs in again with the session token.
+- JSON logs on standard error.
+- Performance on the test machine (200 monitors, `GET /monitors` of 532 kB): 5,000 req/s with p99
+  2.8 to 17.1 ms (2.0 saturated at about 5 req/s); revalidated requests p99 1.45 ms; idle memory
+  22.9 MB; start to healthy 29 to 115 ms; image 6.5 MB compressed. The 2 ms p99 target for full
+  bodies is not met. See [docs/performance.md](docs/performance.md).
+
+### Removed
+
+- The Python implementation, its unit tests and tooling. `tests/e2e` stays as the acceptance suite.
+
+### Known limitations
+
+- On Uptime Kuma 2.0.0, creating a monitor and reading the incident history fail; the acceptance
+  suite passes on 2.5.11.
+
 ## [2.0.0] - 2026-11-12
 
 Upgrade guide: [docs/releases/v2.0.0.md](docs/releases/v2.0.0.md).
@@ -77,4 +130,5 @@ Upgrade guide: [docs/releases/v2.0.0.md](docs/releases/v2.0.0.md).
 - `diff.txt`, the outdated endpoint screenshots, and the curl test scripts (replaced by
   `tests/e2e`).
 
+[3.0.0-rc.1]: https://github.com/MedAziz11/Uptime-Kuma-Web-API/compare/v2.0.0...v3.0.0-rc.1
 [2.0.0]: https://github.com/MedAziz11/Uptime-Kuma-Web-API/compare/v1.2.2...v2.0.0
