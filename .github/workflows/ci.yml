@@ -65,8 +65,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Oldest 2.x release, newest 2.x release, moving 2.x tag
-        kuma-version: ["2.0.0", "2.5.11", "2"]
+        # Oldest 2.x release, a middle one, newest 2.x release, moving 2.x tag
+        kuma-version: ["2.0.0", "2.4.0", "2.5.11", "2"]
     env:
       KUMA_VERSION: ${{ matrix.kuma-version }}
       KUMA_USERNAME: ci-kuma-user

@@ -13,7 +13,7 @@ services:
 
   api:
     build: .
-    # image: medaziz11/uptimekuma_restapi:3
+    # image: medaziz11/uptimekuma_restapi:v3
     volumes:
       - api:/db
     restart: always

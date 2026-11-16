@@ -59,9 +59,9 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # v3.0.0 -> 3.0.0, 3.0, 3 and latest. A pre-release such as v3.0.0-rc.1 gets only
-      # 3.0.0-rc.1: for a pre-release every semver pattern yields {{version}} and the
-      # automatic latest tag is not set. (2.x images were tagged v2.0.0, v2.0, v2.)
+      # v3.0.0 -> v3.0.0, v3.0, v3 and latest, as the 2.x images (v2.0.0, v2.0, v2). A
+      # pre-release such as v3.0.0-rc.1 gets only v3.0.0-rc.1: for a pre-release every semver
+      # pattern yields {{version}} and the automatic latest tag is not set.
       - name: Image tags
         id: meta
         uses: docker/metadata-action@v6
@@ -70,9 +70,14 @@ jobs:
           flavor: |
             latest=auto
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{version}},prefix=v
+            type=semver,pattern={{major}}.{{minor}},prefix=v
+            type=semver,pattern={{major}},prefix=v
+
+      # The binary reports the bare version (3.0.0-rc.1), without the tag's v.
+      - name: Version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       # Cross-compiled in the build stage: no emulation needed for arm64
       - name: Build and push the multi-arch image
@@ -81,7 +86,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: VERSION=${{ steps.meta.outputs.version }}
+          build-args: VERSION=${{ steps.version.outputs.version }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: mode=max
