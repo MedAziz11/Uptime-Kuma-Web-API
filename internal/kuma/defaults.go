@@ -8,28 +8,30 @@ import (
 	"maps"
 )
 
-// monitorDefaults is the monitor Uptime Kuma 2.x's own UI sends to "add"
-// when the user changes nothing: monitorDefaults and init() in
-// src/pages/EditMonitor.vue of 2.5.11 (MONITOR_DEFAULTS in
-// tools/kuma-capture/lifecycle.py). "add" fails with raw JavaScript errors
-// on a partial object.
+// monitorDefaults is the monitor Uptime Kuma 2.0.0's own UI sends to "add"
+// when the user changes nothing: monitorDefaults, init() and the watch on
+// monitor.type in src/pages/EditMonitor.vue of 2.0.0. "add" fails with raw
+// JavaScript errors on a partial object.
+//
+// Only 2.0.0's fields: "add" stores every field it gets (bean.import), so a
+// field whose column a later release added fails on an older server ("table
+// monitor has no column named ..."). Every column added after 2.0.0 has a
+// database default (db/knex_migrations of 2.5.11), which applies when the
+// field is not sent; a client that sends such a field needs a server that
+// has it.
 func monitorDefaults() map[string]any {
 	return map[string]any{
-		"type": "http", "name": "", "parent": nil, "url": "https://", "wsSubprotocol": "", "method": "GET",
-		"protocol": nil, "location": "world", "ipFamily": nil, "interval": 60, "retryInterval": 60,
-		"resendInterval": 0, "maxretries": 0, "retryOnlyOnStatusCodeFailure": false, "notificationIDList": map[string]any{},
-		"ignoreTls": false, "upsideDown": false, "expiryNotification": false, "domainExpiryNotification": true,
-		"maxredirects": 10, "accepted_statuscodes": []any{"200-299"}, "saveResponse": false, "saveErrorResponse": true,
-		"responseMaxLength": 1024, "dns_resolve_type": "A", "dns_resolve_server": "1.1.1.1", "docker_container": "",
-		"docker_host": nil, "proxyId": nil, "basic_auth_user": "", "basic_auth_pass": "", "bearer_token": "",
+		"type": "http", "name": "", "parent": nil, "url": "https://", "method": "GET", "ipFamily": nil,
+		"interval": 60, "retryInterval": 60, "resendInterval": 0, "maxretries": 0, "notificationIDList": map[string]any{},
+		"ignoreTls": false, "upsideDown": false, "expiryNotification": false, "maxredirects": 10,
+		"accepted_statuscodes": []any{"200-299"}, "dns_resolve_type": "A", "dns_resolve_server": "1.1.1.1",
+		"docker_container": "", "docker_host": nil, "proxyId": nil,
 		"mqttUsername": "", "mqttPassword": "", "mqttTopic": "", "mqttWebsocketPath": "", "mqttSuccessMessage": "",
 		"mqttCheckType": "keyword", "authMethod": nil, "oauth_auth_method": "client_secret_basic",
 		"httpBodyEncoding": "json", "kafkaProducerBrokers": []any{}, "kafkaProducerSaslOptions": map[string]any{"mechanism": "None"},
 		"cacheBust": false, "kafkaProducerSsl": false, "kafkaProducerAllowAutoTopicCreation": false,
-		"gamedigGivenPortOnly": true, "gamedigToken": "", "remote_browser": nil, "screenshot_delay": 0,
+		"gamedigGivenPortOnly": true, "remote_browser": nil,
 		"rabbitmqNodes": []any{}, "rabbitmqUsername": "", "rabbitmqPassword": "", "conditions": []any{},
-		"system_service_name": "", "sshAuthMethod": "password", "ntpStratumThreshold": 5,
-		"ntpTimeOffsetThreshold": 1000, "ntpRootDispersionThreshold": 500,
 		// init() for a new monitor
 		"ping_count": 3, "ping_numeric": true, "packetSize": 56, "ping_per_request_timeout": 2,
 		// watch on monitor.type

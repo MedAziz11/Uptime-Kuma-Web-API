@@ -309,8 +309,10 @@ func (s *Server) saveStatusPage(ctx context.Context, in *slugBodyInput) (*jsonOu
 		case "publicGroupList":
 			groups = list(v)
 		case "googleAnalyticsId":
-			// Uptime Kuma 2.x generalised Google Analytics to analyticsId
-			// and analyticsType.
+			// Uptime Kuma 2.1 generalised Google Analytics to analyticsId
+			// and analyticsType; 2.0 reads googleAnalyticsId. Each release
+			// ignores the keys it does not read.
+			config["googleAnalyticsId"] = v
 			config["analyticsId"] = v
 			if config["analyticsType"] == nil && v != nil {
 				config["analyticsType"] = "google"

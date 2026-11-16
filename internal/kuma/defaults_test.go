@@ -5,12 +5,41 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
 
-// The defaults are what the recorded "add" of Uptime Kuma 2.5.11's UI sent
-// (tools/kuma-capture/lifecycle.py), plus what the UI adds by type.
+// fields2_0_0 are the fields Uptime Kuma 2.0.0's UI sends to "add" for a new
+// monitor (monitorDefaults without humanReadableInterval, init(), the watch
+// on monitor.type and submit() in src/pages/EditMonitor.vue of 2.0.0).
+var fields2_0_0 = strings.Fields(`type name parent url method ipFamily interval retryInterval resendInterval
+	maxretries notificationIDList ignoreTls upsideDown expiryNotification maxredirects accepted_statuscodes
+	dns_resolve_type dns_resolve_server docker_container docker_host proxyId mqttUsername mqttPassword
+	mqttTopic mqttWebsocketPath mqttSuccessMessage mqttCheckType authMethod oauth_auth_method
+	httpBodyEncoding kafkaProducerBrokers kafkaProducerSaslOptions cacheBust kafkaProducerSsl
+	kafkaProducerAllowAutoTopicCreation gamedigGivenPortOnly remote_browser rabbitmqNodes rabbitmqUsername
+	rabbitmqPassword conditions ping_count ping_numeric packetSize ping_per_request_timeout
+	port timeout snmpVersion jsonPath pushToken`)
+
+// The defaults send only fields Uptime Kuma 2.0.0 has, whatever the type.
+func TestMonitorDefaultsOnlyUse2_0_0Fields(t *testing.T) {
+	for _, typ := range []string{"http", "keyword", "ping", "dns", "radius", "snmp", "ntp", "sftp", "push",
+		"kafka-producer", "websocket-upgrade", "group", "real-browser"} {
+		m, err := NewMonitor(map[string]any{"type": typ, "name": "x"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for k := range m {
+			if !slices.Contains(fields2_0_0, k) {
+				t.Errorf("%s: %s is not a field of Uptime Kuma 2.0.0's monitor form", typ, k)
+			}
+		}
+	}
+}
+
+// Where the 2.0.0 defaults and the recorded "add" of Uptime Kuma 2.5.11's UI
+// (tools/kuma-capture/lifecycle.py) have the same field, they agree.
 func TestMonitorDefaultsMatchTheRecording(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("testdata", "2.5.11", "lifecycle", "acks.json"))
 	if err != nil {
@@ -35,6 +64,9 @@ func TestMonitorDefaultsMatchTheRecording(t *testing.T) {
 	j, _ := json.Marshal(got)
 	json.Unmarshal(j, &norm)
 	for k, v := range recorded {
+		if _, sent := norm[k]; !sent {
+			continue // added after 2.0.0: the database default applies
+		}
 		if !reflect.DeepEqual(norm[k], v) {
 			t.Errorf("%s = %v, recorded %v", k, norm[k], v)
 		}
