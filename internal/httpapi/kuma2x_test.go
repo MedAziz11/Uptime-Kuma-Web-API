@@ -354,7 +354,11 @@ func TestPushExampleRoute(t *testing.T) {
 func TestCommandsOfANewerKuma(t *testing.T) {
 	e := newEnv(t, Options{})
 	e.kuma.SetVersion("2.0.0")
+	e.kuma.CachePublicPages(true)
 	e.ok(t, "POST", "/statuspages", `{"slug":"page","title":"Page"}`)
+	if page := e.ok(t, "GET", "/statuspages/page", ""); page["incident"] != nil {
+		t.Fatalf("incident before posting one: %v", page["incident"])
+	}
 	inc := e.ok(t, "POST", "/statuspages/page/incident", `{"title":"t","content":"c"}`)
 	path := fmt.Sprintf("/statuspages/page/incidents/%d", int(get[float64](t, inc, "id")))
 	const detail = "Uptime Kuma 2.0.0 does not support "

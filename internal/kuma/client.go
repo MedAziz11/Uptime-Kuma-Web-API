@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -39,6 +40,10 @@ type Client struct {
 	verifyDelay time.Duration // debounce before verifying
 
 	reads flightGroup // identical concurrent reads share one call
+
+	// incidentWrites counts incident commands sent; it is part of the URL
+	// of the public status page (see PublicStatusPage).
+	incidentWrites atomic.Uint64
 
 	// Coalesced monitor list refreshes (refreshMonitors): at most one runs.
 	refreshMu      sync.Mutex
@@ -470,8 +475,16 @@ func (c *Client) GetStatusPage(ctx context.Context, slug string) (json.RawMessag
 // PublicStatusPage reads /api/status-page/{slug}: the page as visitors see
 // it (configuration, pinned incidents, groups of monitors, maintenances).
 // An unknown slug is ErrNotFound.
+//
+// Uptime Kuma caches that answer for 5 minutes by URL, and incident
+// commands do not clear the cache. Before 2.5.11 its cache ignores
+// Cache-Control: no-cache, so the URL carries the number of incident
+// commands sent: the read after one is not served from the cache.
 func (c *Client) PublicStatusPage(ctx context.Context, slug string) (json.RawMessage, error) {
 	path := "/api/status-page/" + url.PathEscape(slug)
+	if n := c.incidentWrites.Load(); n > 0 {
+		path += "?incidents=" + strconv.FormatUint(n, 10)
+	}
 	b, err := c.read(ctx, "GET "+path, func(ctx context.Context) (json.RawMessage, error) {
 		return c.s.get(ctx, path)
 	})
@@ -543,11 +556,13 @@ func (c *Client) refreshStatusPage(ctx context.Context, slug string) {
 
 // PostIncident sends "postIncident".
 func (c *Client) PostIncident(ctx context.Context, slug string, incident map[string]any) (json.RawMessage, error) {
+	defer c.incidentWrites.Add(1)
 	return c.s.Call(ctx, "postIncident", slug, incident)
 }
 
 // UnpinIncident sends "unpinIncident".
 func (c *Client) UnpinIncident(ctx context.Context, slug string) (json.RawMessage, error) {
+	defer c.incidentWrites.Add(1)
 	return c.s.Call(ctx, "unpinIncident", slug)
 }
 
@@ -574,6 +589,7 @@ func (c *Client) EditIncident(ctx context.Context, slug string, id int64, incide
 	if err := c.supports(ctx, "editIncident"); err != nil {
 		return nil, err
 	}
+	defer c.incidentWrites.Add(1)
 	return c.s.Call(ctx, "editIncident", slug, id, incident)
 }
 
@@ -582,6 +598,7 @@ func (c *Client) DeleteIncident(ctx context.Context, slug string, id int64) (jso
 	if err := c.supports(ctx, "deleteIncident"); err != nil {
 		return nil, err
 	}
+	defer c.incidentWrites.Add(1)
 	return c.s.Call(ctx, "deleteIncident", slug, id)
 }
 
@@ -591,6 +608,7 @@ func (c *Client) ResolveIncident(ctx context.Context, slug string, id int64) (js
 	if err := c.supports(ctx, "resolveIncident"); err != nil {
 		return nil, err
 	}
+	defer c.incidentWrites.Add(1)
 	return c.s.Call(ctx, "resolveIncident", slug, id)
 }
 

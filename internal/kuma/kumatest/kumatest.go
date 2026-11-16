@@ -55,6 +55,9 @@ type Server struct {
 	noPush        bool
 	calls         map[string]int
 	version       string // in "info" after a login
+	// pageCache, when not nil, keeps each public status page answer by URL,
+	// whatever Cache-Control says, as Uptime Kuma before 2.5.11 does.
+	pageCache map[string][]byte
 	// beforeListPush runs once in getMonitorList, between reading the list
 	// and pushing it: what Kuma does meanwhile makes the list stale.
 	beforeListPush func()
@@ -96,6 +99,17 @@ func (k *Server) SetVersion(v string) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	k.version = v
+}
+
+// CachePublicPages makes the public status page answers cached by URL (on)
+// or not (off).
+func (k *Server) CachePublicPages(on bool) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.pageCache = nil
+	if on {
+		k.pageCache = map[string][]byte{}
+	}
 }
 
 // NoPush stops (or restarts) the pushes that follow commands.
@@ -1096,6 +1110,12 @@ func (k *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	k.mu.Lock()
+	if b, ok := k.pageCache[r.URL.RequestURI()]; ok {
+		k.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(b)
+		return
+	}
 	p := k.pageBySlug(strings.ToLower(slug))
 	var body Object
 	if p != nil {
@@ -1123,12 +1143,17 @@ func (k *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	k.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	if body == nil {
+		k.mu.Unlock()
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, `{"status":"fail","msg":"Status Page Not Found"}`)
 		return
 	}
-	_ = json.NewEncoder(w).Encode(body)
+	b, _ := json.Marshal(body)
+	if k.pageCache != nil {
+		k.pageCache[r.URL.RequestURI()] = b
+	}
+	k.mu.Unlock()
+	_, _ = w.Write(b)
 }
