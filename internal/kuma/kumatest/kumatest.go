@@ -56,7 +56,7 @@ type Server struct {
 	calls         map[string]int
 	version       string // in "info" after a login
 	// pageCache, when not nil, keeps each public status page answer by URL,
-	// whatever Cache-Control says, as Uptime Kuma before 2.5.11 does.
+	// whatever Cache-Control says, as Uptime Kuma before 2.5.9 does.
 	pageCache map[string][]byte
 	// beforeListPush runs once in getMonitorList, between reading the list
 	// and pushing it: what Kuma does meanwhile makes the list stale.

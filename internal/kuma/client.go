@@ -477,7 +477,7 @@ func (c *Client) GetStatusPage(ctx context.Context, slug string) (json.RawMessag
 // An unknown slug is ErrNotFound.
 //
 // Uptime Kuma caches that answer for 5 minutes by URL, and incident
-// commands do not clear the cache. Before 2.5.11 its cache ignores
+// commands do not clear the cache. Before 2.5.9 its cache ignores
 // Cache-Control: no-cache, so the URL carries the number of incident
 // commands sent: the read after one is not served from the cache.
 func (c *Client) PublicStatusPage(ctx context.Context, slug string) (json.RawMessage, error) {
