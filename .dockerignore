@@ -1,4 +1,7 @@
 *
-!app
-!requirements.txt
-**/__pycache__
+!go.mod
+!go.sum
+!cmd
+!internal
+**/*_test.go
+**/testdata
