@@ -1,93 +1,88 @@
 # Contributing
 
+This branch is 3.x (Go, Uptime Kuma 2.x). The 2.x line (Python, Uptime Kuma 1.x) lives on the
+branch `2.x` and only takes security fixes.
+
 ## Setup
 
-Python 3.11 or newer.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt
-pre-commit install                 # optional: lint and format on commit
-```
+Go 1.27 (see `go.mod`); Docker for the image and the acceptance tests; Python 3.11 or newer for
+the acceptance tests only (`pip install -r tests/e2e/requirements.txt`).
 
 ## Everyday commands
 
-| Command         | What it does                                                               |
-| --------------- | -------------------------------------------------------------------------- |
-| `make run`      | Run the API with auto-reload (reads `.env`)                                |
-| `make lint`     | `ruff check` and `ruff format --check`                                     |
-| `make format`   | Fix lint findings and format                                               |
-| `make test`     | Unit and integration tests; no Uptime Kuma or Docker needed                |
-| `make coverage` | Same, with the coverage report (CI fails under 95 %)                       |
-| `make e2e`      | End-to-end tests against a real Uptime Kuma in Docker ([details](tests/e2e/README.md)) |
+| Command      | What it does                                                                  |
+| ------------ | ----------------------------------------------------------------------------- |
+| `make fmt`   | `gofmt -w .`                                                                  |
+| `make vet`   | `go vet ./...`                                                                |
+| `make lint`  | golangci-lint (`.golangci.yml`) and govulncheck, at the versions CI uses      |
+| `make test`  | Unit tests with the race detector and coverage; no Uptime Kuma or Docker needed |
+| `make bench` | In-process benchmarks                                                         |
+| `make build` | Static binary `./uptime-kuma-api`; `make run` starts it (needs the variables of `.env.dist`) |
+| `make docker`| The image (`VERSION=...` sets the version it reports)                         |
+| `make e2e`   | Acceptance tests against a real Uptime Kuma in Docker ([details](tests/e2e/README.md)) |
 
 ## Project layout
 
 ```
-app/
-  main.py        application factory, lifespan, router registration
-  config.py      settings (environment variables)
-  kuma.py        KumaClient: the shared, self-reconnecting Uptime Kuma connection
-  errors.py      Uptime Kuma errors -> HTTP status codes
-  deps.py        authentication and other dependencies
-  security.py    password hashing and JWT
-  database.py    SQLite user database
-  routers/       one module per URL prefix
-  schemas/       request/response models
-tests/
-  test_*.py      unit tests (Uptime Kuma is mocked)
-  test_kuma_integration.py   real uptime-kuma-api client against a stand-in Socket.IO server
-  e2e/           the API in front of a real Uptime Kuma
+cmd/uptime-kuma-api/   main: configuration, wiring, graceful shutdown, healthcheck subcommand
+internal/config/       environment variables (names and defaults of 2.0)
+internal/kuma/sio/     Engine.IO / Socket.IO client over WebSocket
+internal/kuma/         Uptime Kuma session, pushed state, typed commands, monitor defaults
+internal/auth/         bcrypt, JWT (HS256), secret key file
+internal/store/        users in SQLite (the 1.x/2.0 database, unchanged)
+internal/httpapi/      routes, request/response types, middleware, response cache, OpenAPI
+internal/version/      the version, set at build time
+tools/loadtest/        load generator (docs/performance.md)
+tools/kuma-capture/    scripts that record Uptime Kuma's frames into internal/kuma/testdata
+tests/e2e/             acceptance suite: the API in front of a real Uptime Kuma, HTTP only
 ```
+
+The design is in [docs/architecture.md](docs/architecture.md); what Uptime Kuma 2.x does is in
+[docs/kuma-2x-notes.md](docs/kuma-2x-notes.md).
 
 ## Tests
 
-Three layers, because each one misses things the others catch:
+- **Unit tests** next to the code. `internal/kuma` runs against an in-process fake Uptime Kuma that
+  speaks Socket.IO over a real WebSocket; payloads come from recordings of a real Uptime Kuma
+  (`internal/kuma/testdata`). `internal/httpapi` replays requests recorded against 2.0
+  (conformance tests). Tests against a real Uptime Kuma are skipped unless their environment
+  variables are set.
+- **Acceptance tests** (`tests/e2e`) run every route against real Uptime Kuma versions. Add a case
+  there whenever a route is added: Uptime Kuma's answers are not always what its source suggests.
 
-- **Route tests** (`test_kuma_routes.py`, `test_auth_users.py`, ...) replace `KumaClient` with a
-  fake. They check validation, authentication, what is forwarded to Uptime Kuma and how errors are
-  mapped.
-- **Client tests** (`test_kuma_client.py`, `test_kuma_integration.py`) check the connection
-  handling: lazy connect, reconnect, re-login, timeouts.
-- **End-to-end tests** (`tests/e2e`) run every endpoint against real Uptime Kuma versions. Add a
-  case there whenever an endpoint is added: Uptime Kuma's answers are not always what
-  the library documents.
+## Adding a route
 
-## Adding an endpoint
-
-1. Add the route to the matching module in `app/routers/` as a plain `def` (not `async def`):
-   `KumaClient` blocks, and FastAPI runs `def` routes in a thread pool.
-2. Call the library through the injected client: `kuma.some_method(...)`. Any public method of
-   `UptimeKumaApi` is available.
-3. Do not catch Uptime Kuma exceptions in the route; `app/errors.py` maps them.
-4. A new router must be registered in `app/main.py` inside the authenticated loop.
-   `tests/test_app.py` fails if a route answers without a token.
-5. Add a route test and an end-to-end test, and update `CHANGELOG.md` and the README table.
+1. Record what Uptime Kuma sends for the command (`tools/kuma-capture`) instead of guessing.
+2. Add the command to `internal/kuma` and the route to `internal/httpapi` with request and
+   response types; the OpenAPI document is generated from them.
+3. Every route requires a token unless it is listed in `publicPaths`.
+4. Add unit tests and an acceptance test, and update `CHANGELOG.md` and the README table.
 
 ## Pull requests
 
 - Branch from `develop` (or `main` for hotfixes).
-- CI must pass: lint, unit tests on Python 3.11–3.13, end-to-end tests on three Uptime Kuma versions,
-  and the multi-arch image build.
+- CI must pass: gofmt, go vet, unit tests with the race detector, golangci-lint, govulncheck, the
+  acceptance tests on three Uptime Kuma versions, and the multi-arch image build.
 - Add a line under "Unreleased" in `CHANGELOG.md` for user-visible changes.
+- No new Go dependency without a line in the table of architecture.md §10.
 
 ## Releasing (maintainers)
 
-1. Choose the version (semantic versioning; breaking changes bump the major).
-2. Update the version in `app/__init__.py` and `pyproject.toml`.
-3. In `CHANGELOG.md`, rename "Unreleased" to the version with today's date.
-4. Write `docs/releases/vX.Y.Z.md` (it becomes the GitHub release body).
-   `tests/test_app.py` checks that these four places agree.
-5. Merge to `main`, then tag and push:
+1. Choose the version (semantic versioning; breaking changes bump the major). A release candidate
+   is `X.Y.Z-rc.N`.
+2. In `CHANGELOG.md`, rename "Unreleased" to `[X.Y.Z]` with today's date.
+3. Write `docs/releases/vX.Y.Z.md` (it becomes the GitHub release body; generated notes otherwise).
+4. Merge to `main`, then tag and push:
 
    ```bash
    git tag vX.Y.Z
    git push origin vX.Y.Z
    ```
 
-The `Release` workflow then checks the tag against the code, runs the tests, publishes the Docker
-image (`vX.Y.Z`, `vX.Y`, `vX`, `latest`) and creates the GitHub release.
+The `Release` workflow (tags `v3.*`) checks that the tag is `v3.X.Y` or `v3.X.Y-rc.N` and has a
+`CHANGELOG.md` section, runs the tests, builds the image for amd64 and arm64 with the version set
+from the tag, pushes it with an SBOM and provenance (`X.Y.Z`, `X.Y`, `X`, `latest`; a release
+candidate only `X.Y.Z-rc.N`) and creates the GitHub release (a pre-release for `-rc.N`).
 
 It needs the repository secrets `DOCKER_USERNAME` and `DOCKER_PASSWORD` (a Docker Hub access token).
 The image name can be overridden with the repository variables `DOCKERHUB_REPO` and

@@ -2,10 +2,11 @@
 
 ## Supported versions
 
-| Version | Supported |
-| ------- | --------- |
-| 2.x     | yes       |
-| 1.x     | no — `POST /users` is unauthenticated in 1.x; upgrade to 2.x |
+| Version | Uptime Kuma | Supported |
+| ------- | ----------- | --------- |
+| 3.x     | 2.x         | yes       |
+| 2.x     | 1.x         | security fixes only (branch `2.x`) |
+| 1.x     | 1.x         | no — `POST /users` is unauthenticated in 1.x; upgrade to 2.x |
 
 ## Reporting a vulnerability
 
@@ -17,9 +18,12 @@ with the affected version, how to reproduce it and the impact.
 
 - This API holds the credentials of an Uptime Kuma account and gives every API user full control
   over that Uptime Kuma instance. Do not expose it to untrusted networks; put it behind TLS.
-- Use a strong `ADMIN_PASSWORD`. There is no rate limiting on `/login/access-token`; add it at your
-  reverse proxy if the API is reachable by others.
+- Use a strong `ADMIN_PASSWORD`. There is no rate limiting on `/login/access-token` (3.x only
+  bounds the number of concurrent bcrypt checks); add it at your reverse proxy if the API is
+  reachable by others.
 - Set `SECRET_KEY` explicitly if several instances must accept the same tokens. Otherwise a key is
   generated and stored next to the database (`/db/secret_key`); protect that volume.
 - Access tokens are valid for `ACCESS_TOKEN_EXPIRATION` minutes (8 days by default) and cannot be
   revoked individually; deleting the user or changing the signing key invalidates them.
+- The 3.x image runs as uid 100, gid 101 without a shell; the volume holds the user database and
+  the signing key.
