@@ -212,12 +212,26 @@ func (c *Client) ImportantHeartbeats(ctx context.Context, id, offset, count int6
 
 // AddMonitorTag sends "addMonitorTag".
 func (c *Client) AddMonitorTag(ctx context.Context, tagID, monitorID int64, value string) (json.RawMessage, error) {
-	return c.write(ctx, Monitors, "addMonitorTag", tagID, monitorID, value)
+	return c.monitorTagWrite(ctx, "addMonitorTag", tagID, monitorID, value)
 }
 
 // DeleteMonitorTag sends "deleteMonitorTag".
 func (c *Client) DeleteMonitorTag(ctx context.Context, tagID, monitorID int64, value string) (json.RawMessage, error) {
-	return c.write(ctx, Monitors, "deleteMonitorTag", tagID, monitorID, value)
+	return c.monitorTagWrite(ctx, "deleteMonitorTag", tagID, monitorID, value)
+}
+
+// monitorTagWrite sends a monitor tag command. Uptime Kuma pushes the
+// monitor after it from 2.1.0 on; before, the monitor list is fetched again.
+func (c *Client) monitorTagWrite(ctx context.Context, event string, args ...any) (json.RawMessage, error) {
+	if !olderThan(c.serverVersion(), "2.1.0") {
+		return c.write(ctx, Monitors, event, args...)
+	}
+	ack, err := c.s.Call(ctx, event, args...)
+	if err != nil {
+		return nil, err
+	}
+	c.refreshMonitors(ctx)
+	return ack, nil
 }
 
 // Tags. Uptime Kuma pushes nothing after tag commands, so they are not part

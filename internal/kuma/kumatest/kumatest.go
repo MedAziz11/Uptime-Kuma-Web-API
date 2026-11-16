@@ -1114,6 +1114,14 @@ func (k *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			groups = []any{}
 		}
 		body = Object{"config": config, "incidents": incidents, "publicGroupList": groups, "maintenanceList": []any{}}
+		if strings.HasPrefix(k.version, "2.0.") {
+			// Before 2.1.0: the newest pinned, active incident only.
+			delete(body, "incidents")
+			body["incident"] = nil
+			if len(incidents) > 0 {
+				body["incident"] = incidents[0]
+			}
+		}
 	}
 	k.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")

@@ -253,7 +253,11 @@ func (s *Server) readStatusPage(ctx context.Context, slug string) (*statusPage, 
 	if c, ok := p["config"].(map[string]any); ok {
 		maps.Copy(config, c)
 	}
-	page := &statusPage{config: config, incidents: list(p["incidents"]), groups: list(p["publicGroupList"]), maint: list(p["maintenanceList"])}
+	incidents := list(p["incidents"])
+	if inc, ok := p["incident"].(map[string]any); ok && p["incidents"] == nil {
+		incidents = []any{inc} // before Uptime Kuma 2.1.0: the pinned incident only
+	}
+	page := &statusPage{config: config, incidents: incidents, groups: list(p["publicGroupList"]), maint: list(p["maintenanceList"])}
 	return page, nil
 }
 

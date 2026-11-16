@@ -369,6 +369,23 @@ func TestCommandsOfANewerKuma(t *testing.T) {
 			t.Errorf("%s sent %d times", ev, n)
 		}
 	}
+	// Before 2.1.0 the public page has the pinned incident only.
+	if page := e.ok(t, "GET", "/statuspages/page", ""); get[string](t, page, "incident", "title") != "t" {
+		t.Errorf("incident of a 2.0.0 page: %v", page["incident"])
+	}
+
+	// Before 2.1.0 Uptime Kuma pushes nothing after a monitor tag command:
+	// the monitor list is fetched again.
+	id := int(get[float64](t, e.ok(t, "POST", "/monitors", `{"type":"http","name":"m","url":"http://x"}`), "monitorID"))
+	tag := int(get[float64](t, e.ok(t, "POST", "/tags", `{"name":"t","color":"#000000"}`), "id"))
+	before := e.kuma.Calls("getMonitorList")
+	e.ok(t, "POST", fmt.Sprintf("/monitors/%d/tag", id), fmt.Sprintf(`{"tag_id":%d,"value":"v"}`, tag))
+	if e.kuma.Calls("getMonitorList") == before {
+		t.Error("the monitor list was not fetched after addMonitorTag")
+	}
+	if tags := get[[]any](t, e.ok(t, "GET", fmt.Sprintf("/monitors/%d", id), ""), "monitor", "tags"); len(tags) != 1 {
+		t.Errorf("tags after addMonitorTag: %v", tags)
+	}
 }
 
 // A field the server's database has no column for is a 400 that names it.

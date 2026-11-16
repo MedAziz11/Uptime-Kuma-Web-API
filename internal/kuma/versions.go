@@ -43,17 +43,23 @@ func (c *Client) supports(ctx context.Context, event string) error {
 	if err := c.Sync(ctx); err != nil {
 		return err
 	}
+	if have := c.serverVersion(); olderThan(have, minimum) {
+		return &UnsupportedError{Event: event, Have: have, Minimum: minimum}
+	}
+	return nil
+}
+
+// serverVersion is the version of the connected Uptime Kuma, from the
+// "info" it pushed at the login, or "" before that.
+func (c *Client) serverVersion() string {
 	raw, _ := c.st.Info()
 	var info struct {
 		Version string `json:"version"`
 	}
-	if raw == nil || json.Unmarshal(raw, &info) != nil || info.Version == "" {
-		return nil
+	if raw == nil || json.Unmarshal(raw, &info) != nil {
+		return ""
 	}
-	if olderThan(info.Version, minimum) {
-		return &UnsupportedError{Event: event, Have: info.Version, Minimum: minimum}
-	}
-	return nil
+	return info.Version
 }
 
 // olderThan reports whether version a is older than b, comparing major,
