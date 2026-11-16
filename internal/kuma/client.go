@@ -568,6 +568,12 @@ func (c *Client) ResolveIncident(ctx context.Context, slug string, id int64) (js
 	return c.s.Call(ctx, "resolveIncident", slug, id)
 }
 
+// PushExample sends "getPushExample": example code that pushes to a push
+// monitor, in language (e.g. "javascript-fetch", "python").
+func (c *Client) PushExample(ctx context.Context, language string) (json.RawMessage, error) {
+	return c.readCommand(ctx, "getPushExample", language)
+}
+
 // Database.
 
 // DatabaseSize sends "getDatabaseSize".

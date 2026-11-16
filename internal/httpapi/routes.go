@@ -298,6 +298,8 @@ func (s *Server) kumaRoutes(op func(method, path, id, summary, tag string, auth 
 	body(patch, "/remote_browsers/{remote_browser_id}", "RemoteBrowserOptions", reflect.TypeFor[RemoteBrowserOptions]())
 	huma.Register(s.api, reg(del, "/remote_browsers/{remote_browser_id}", "delete_remote_browser", "Delete a remote browser", "Remote Browsers"), s.deleteRemoteBrowser)
 
+	huma.Register(s.api, reg(get, "/push_examples/{language}", "get_push_example", "Get example code for a push monitor", "Monitor"), s.pushExample)
+
 	// Settings, database, server and statistics.
 	backup := reg(post, "/settings/upload_backup", "upload_backup", "Import a backup", "Settings")
 	backup.Deprecated = true

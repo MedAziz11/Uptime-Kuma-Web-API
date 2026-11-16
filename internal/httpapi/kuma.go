@@ -79,6 +79,7 @@ type Kuma interface {
 	DeleteIncident(ctx context.Context, slug string, id int64) (json.RawMessage, error)
 	ResolveIncident(ctx context.Context, slug string, id int64) (json.RawMessage, error)
 
+	PushExample(ctx context.Context, language string) (json.RawMessage, error)
 	DatabaseSize(ctx context.Context) (json.RawMessage, error)
 	ShrinkDatabase(ctx context.Context) (json.RawMessage, error)
 }

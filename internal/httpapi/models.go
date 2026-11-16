@@ -481,3 +481,8 @@ type ImportantBeats struct {
 	ImportantBeats []map[string]any `json:"important_beats"`
 	Total          int64            `json:"total" doc:"Important heartbeats of the monitor in all."`
 }
+
+// PushExample is the body of GET /push_examples/{language}.
+type PushExample struct {
+	Code string `json:"code" doc:"Example code, with a placeholder push URL."`
+}

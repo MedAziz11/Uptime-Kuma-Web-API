@@ -312,6 +312,12 @@ def test_incidents(api: Api):
     api.get(f"/statuspages/{slug}/incidents", expect=404)
 
 
+def test_push_examples(api: Api):
+    assert "fetch" in api.get("/push_examples/javascript-fetch")["code"]
+    api.get("/push_examples/no-such-language", expect=404)
+    api.get("/push_examples/Bad_Language", expect=400)
+
+
 def test_backup_import(api: Api):
     # Uptime Kuma 2.x removed backup import: the route answers 410 Gone.
     backup = {"version": "1.23.0", "notificationList": [], "monitorList": [], "proxyList": []}

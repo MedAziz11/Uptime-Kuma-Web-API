@@ -148,3 +148,14 @@ func TestClientChartAndImportantBeats(t *testing.T) {
 		t.Fatalf("paged %v", d)
 	}
 }
+
+func TestClientPushExample(t *testing.T) {
+	checkLeaks(t)
+	c, _, _ := newClient(t, testTimeout)
+	if code := field[string](t, mustFor(t)(c.PushExample(context.Background(), "javascript-fetch")), "code"); code == "" {
+		t.Fatal("no code")
+	}
+	if _, err := c.PushExample(context.Background(), "nope"); err == nil {
+		t.Fatal("unknown language")
+	}
+}

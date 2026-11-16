@@ -23,6 +23,9 @@ type (
 		Offset    int64 `query:"offset" default:"0" minimum:"0"`
 		Limit     int64 `query:"limit" default:"25" minimum:"1" maximum:"1000"`
 	}
+	pushExampleInput struct {
+		Language string `path:"language" doc:"For example javascript-fetch, python, bash-curl."`
+	}
 	incidentHistoryInput struct {
 		Slug   string `path:"slug"`
 		Cursor string `query:"cursor" doc:"The nextCursor of the previous page; empty for the first page."`
@@ -300,4 +303,13 @@ func (s *Server) importantBeats(ctx context.Context, in *importantBeatsInput) (*
 		return nil, s.internal(ctx, "read the heartbeats", errUnexpected)
 	}
 	return replyAs[ImportantBeats](s, ctx, map[string]any{"important_beats": page.Data, "total": *count.Count})
+}
+
+// pushExample answers Uptime Kuma's example code for a push monitor.
+func (s *Server) pushExample(ctx context.Context, in *pushExampleInput) (*jsonOutput[PushExample], error) {
+	ack, err := s.kuma.PushExample(ctx, in.Language)
+	if err != nil {
+		return nil, s.kumaError(ctx, err)
+	}
+	return replyAs[PushExample](s, ctx, ackBody(ack))
 }

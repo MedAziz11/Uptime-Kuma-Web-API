@@ -334,3 +334,17 @@ func (m malformedAcks) ImportantHeartbeatCount(ctx context.Context, id int64) (j
 func (m malformedAcks) ImportantHeartbeats(context.Context, int64, int64, int64) (json.RawMessage, error) {
 	return json.RawMessage(`{"ok":true}`), nil
 }
+
+func TestPushExampleRoute(t *testing.T) {
+	e := newEnv(t, Options{})
+	if r := e.ok(t, "GET", "/push_examples/javascript-fetch", ""); r["code"] != "fetch(pushURL)\n" {
+		t.Fatalf("example %v", r)
+	}
+	e.checkErrors(t, []errorCase{
+		{"GET", "/push_examples/cobol", "", 404, "Not found"},
+		{"GET", "/push_examples/Bad_Lang", "", 400, "Invalid language"},
+	})
+	e.checkKumaFailures(t, []struct{ event, method, path, body string }{
+		{"getPushExample", "GET", "/push_examples/javascript-fetch", ""},
+	})
+}

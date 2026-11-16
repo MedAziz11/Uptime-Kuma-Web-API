@@ -349,6 +349,15 @@ func (k *Server) handlers() map[string]handler {
 		},
 		"addAPIKey": k.addAPIKey, "getAPIKeyList": k.getAPIKeyList, "deleteAPIKey": k.deleteAPIKey,
 		"enableAPIKey": k.activateAPIKey(true), "disableAPIKey": k.activateAPIKey(false),
+		"getPushExample": func(ev siotest.Event) (any, func()) {
+			switch lang := str(ev, 0); {
+			case strings.Trim(lang, "abcdefghijklmnopqrstuvwxyz-") != "" || lang == "":
+				return fail("Invalid language"), nil
+			case lang == "javascript-fetch":
+				return ok("code", "fetch(pushURL)\n"), nil
+			}
+			return fail("Not found"), nil
+		},
 		"getDatabaseSize": func(siotest.Event) (any, func()) { return ok("size", 61440), nil },
 		"shrinkDatabase":  func(siotest.Event) (any, func()) { return ok(), nil },
 	}
