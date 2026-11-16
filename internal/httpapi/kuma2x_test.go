@@ -348,3 +348,36 @@ func TestPushExampleRoute(t *testing.T) {
 		{"getPushExample", "GET", "/push_examples/javascript-fetch", ""},
 	})
 }
+
+// Commands an older Uptime Kuma does not have answer 501 at once, without
+// a call that would only end at the timeout.
+func TestCommandsOfANewerKuma(t *testing.T) {
+	e := newEnv(t, Options{})
+	e.kuma.SetVersion("2.0.0")
+	e.ok(t, "POST", "/statuspages", `{"slug":"page","title":"Page"}`)
+	inc := e.ok(t, "POST", "/statuspages/page/incident", `{"title":"t","content":"c"}`)
+	path := fmt.Sprintf("/statuspages/page/incidents/%d", int(get[float64](t, inc, "id")))
+	const detail = "Uptime Kuma 2.0.0 does not support "
+	e.checkErrors(t, []errorCase{
+		{"GET", "/statuspages/page/incidents", "", 501, detail + "getIncidentHistory: it needs Uptime Kuma 2.1.0 or later"},
+		{"PATCH", path, `{"title":"x"}`, 501, detail + "getIncidentHistory"},
+		{"DELETE", path, "", 501, detail + "deleteIncident"},
+		{"POST", path + "/resolve", "", 501, detail + "resolveIncident"},
+	})
+	for _, ev := range []string{"getIncidentHistory", "editIncident", "deleteIncident", "resolveIncident"} {
+		if n := e.kuma.Calls(ev); n != 0 {
+			t.Errorf("%s sent %d times", ev, n)
+		}
+	}
+}
+
+// A field the server's database has no column for is a 400 that names it.
+func TestFieldOfANewerKuma(t *testing.T) {
+	e := newEnv(t, Options{})
+	e.kuma.Fail("add", "SQLITE_ERROR: table monitor has no column named bearer_token")
+	e.checkErrors(t, []errorCase{{"POST", "/monitors", `{"type":"http","name":"m","url":"http://x","bearer_token":"t"}`, 400,
+		`this Uptime Kuma has no field "bearer_token": it was added by a later Uptime Kuma release`}})
+	e.kuma.Fail("add", "ER_BAD_FIELD_ERROR: Unknown column 'gamedig_token' in 'field list'")
+	e.checkErrors(t, []errorCase{{"POST", "/monitors", `{"type":"http","name":"m","url":"http://x"}`, 400,
+		`this Uptime Kuma has no field "gamedig_token"`}})
+}

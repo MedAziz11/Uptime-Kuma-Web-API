@@ -54,6 +54,7 @@ type Server struct {
 	failures      map[string]string
 	noPush        bool
 	calls         map[string]int
+	version       string // in "info" after a login
 	// beforeListPush runs once in getMonitorList, between reading the list
 	// and pushing it: what Kuma does meanwhile makes the list stale.
 	beforeListPush func()
@@ -67,7 +68,7 @@ func New() *Server {
 		proxies: map[int]Object{}, dockerHosts: map[int]Object{}, maintenances: map[int]Object{},
 		maintMonitors: map[int][]int{}, statusPages: map[int]Object{}, apiKeys: map[int]Object{}, browsers: map[int]Object{}, groups: map[int][]any{},
 		incidents: map[int][]Object{}, beats: map[int][]Object{}, failures: map[string]string{},
-		calls: map[string]int{},
+		calls: map[string]int{}, version: Version,
 	}
 	k.Server = siotest.NewServer(siotest.Options{
 		OnConnect: k.onConnect,
@@ -87,6 +88,14 @@ func (k *Server) Fail(event, msg string) {
 		return
 	}
 	k.failures[event] = msg
+}
+
+// SetVersion sets the version the fake reports in "info" from the next
+// login on.
+func (k *Server) SetVersion(v string) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.version = v
 }
 
 // NoPush stops (or restarts) the pushes that follow commands.
@@ -246,13 +255,14 @@ func (k *Server) afterLogin(s *siotest.Socket) {
 	notifs, proxies, docker := values(k.notifications), values(k.proxies), values(k.dockerHosts)
 	pages := k.objectMap(k.statusPages)
 	keys, browsers := values(k.apiKeys), values(k.browsers)
+	version := k.version
 	beats := map[int][]Object{}
 	for id := range k.monitors {
 		beats[id] = slices.Clone(k.beats[id])
 	}
 	k.mu.Unlock()
 	_ = s.Emit("monitorList", monitors)
-	_ = s.Emit("info", Object{"primaryBaseURL": nil, "serverTimezone": "UTC", "serverTimezoneOffset": "+00:00", "version": Version, "latestVersion": nil, "isContainer": true, "dbType": "sqlite"})
+	_ = s.Emit("info", Object{"primaryBaseURL": nil, "serverTimezone": "UTC", "serverTimezoneOffset": "+00:00", "version": version, "latestVersion": nil, "isContainer": true, "dbType": "sqlite"})
 	_ = s.Emit("maintenanceList", maint)
 	_ = s.Emit("notificationList", notifs)
 	_ = s.Emit("proxyList", proxies)

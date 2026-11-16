@@ -8,6 +8,15 @@ from tests.e2e.conftest import Api
 UNKNOWN = 99999
 
 
+def kuma_older_than(api: Api, version: str) -> bool:
+    """Whether the Uptime Kuma behind the API is older than version (major.minor.patch)."""
+
+    def parse(v: str) -> tuple[int, ...]:
+        return tuple(int(p) for p in v.split("-")[0].split(".")[:3])
+
+    return parse(api.get("/info")["version"]) < parse(version)
+
+
 def test_public_endpoints(api: Api):
     assert requests.get(f"{api.url}/health", timeout=30).json()["status"] == "ok"
     assert requests.get(f"{api.url}/monitors", timeout=30).status_code == 401
@@ -278,6 +287,11 @@ def test_incidents(api: Api):
     slug = "e2e-incidents"
     api.post("/statuspages", json={"slug": slug, "title": "E2E incidents"})
     try:
+        if kuma_older_than(api, "2.1.0"):
+            # No incident history before Uptime Kuma 2.1.0: the API says so at once.
+            detail = api.get(f"/statuspages/{slug}/incidents", expect=501)["detail"]
+            assert "2.1.0 or later" in detail
+            pytest.skip("Uptime Kuma before 2.1.0 has no incident history")
         assert api.get(f"/statuspages/{slug}/incidents") == {
             "incidents": [],
             "total": 0,

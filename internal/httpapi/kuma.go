@@ -139,6 +139,9 @@ func ackBody(ack json.RawMessage) map[string]any {
 var (
 	notFoundRaw = regexp.MustCompile(`(?i)Cannot read properties of null|No slug\?|You do not own this|FOREIGN KEY constraint failed`)
 	notFound    = regexp.MustCompile(`(?i)does not exist|not found|no .*found`)
+	// A field the server's database has no column for (one added by a
+	// later Uptime Kuma release): SQLite's and MariaDB's messages.
+	noColumn = regexp.MustCompile(`has no column named (\w+)|Unknown column '(\w+)'`)
 	// Other raw errors are internal details: logged, never returned.
 	rawError = regexp.MustCompile(`(?i)Cannot read propert|is not a function|is not defined|is not iterable|SQLITE_|constraint failed|Unexpected token`)
 )
@@ -148,11 +151,20 @@ var (
 func (s *Server) kumaError(ctx context.Context, err error) error {
 	id := infoFrom(ctx).id
 	var ce *kuma.CommandError
+	var ue *kuma.UnsupportedError
 	switch {
+	case errors.As(err, &ue):
+		s.log.InfoContext(ctx, "Uptime Kuma is too old for a command", "request_id", id, "event", ue.Event,
+			"version", ue.Have, "minimum", ue.Minimum)
+		return newError(http.StatusNotImplemented, ue.Error())
 	case errors.As(err, &ce):
 		msg := kumaMessage(ce.Msg, ce.I18n)
 		s.log.InfoContext(ctx, "Uptime Kuma refused a command", "request_id", id, "event", ce.Event, "msg", ce.Msg)
 		switch {
+		case noColumn.MatchString(msg):
+			col := noColumn.FindStringSubmatch(msg)
+			return newError(http.StatusBadRequest, "this Uptime Kuma has no field "+strconv.Quote(col[1]+col[2])+
+				": it was added by a later Uptime Kuma release")
 		case notFoundRaw.MatchString(msg):
 			return newError(http.StatusNotFound, "Not found")
 		case notFound.MatchString(msg):

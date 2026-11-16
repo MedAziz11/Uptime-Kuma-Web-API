@@ -541,6 +541,9 @@ func (c *Client) UnpinIncident(ctx context.Context, slug string) (json.RawMessag
 // page, newest first, one page at a time. cursor is empty for the first
 // page, else the "nextCursor" of the previous one.
 func (c *Client) IncidentHistory(ctx context.Context, slug, cursor string) (json.RawMessage, error) {
+	if err := c.supports(ctx, "getIncidentHistory"); err != nil {
+		return nil, err
+	}
 	var arg any // null for the first page
 	if cursor != "" {
 		arg = cursor
@@ -554,17 +557,26 @@ func (c *Client) IncidentHistory(ctx context.Context, slug, cursor string) (json
 // EditIncident sends "editIncident". Uptime Kuma sets title, content, style
 // and pin from incident.
 func (c *Client) EditIncident(ctx context.Context, slug string, id int64, incident map[string]any) (json.RawMessage, error) {
+	if err := c.supports(ctx, "editIncident"); err != nil {
+		return nil, err
+	}
 	return c.s.Call(ctx, "editIncident", slug, id, incident)
 }
 
 // DeleteIncident sends "deleteIncident".
 func (c *Client) DeleteIncident(ctx context.Context, slug string, id int64) (json.RawMessage, error) {
+	if err := c.supports(ctx, "deleteIncident"); err != nil {
+		return nil, err
+	}
 	return c.s.Call(ctx, "deleteIncident", slug, id)
 }
 
 // ResolveIncident sends "resolveIncident": the incident becomes inactive
 // and unpinned.
 func (c *Client) ResolveIncident(ctx context.Context, slug string, id int64) (json.RawMessage, error) {
+	if err := c.supports(ctx, "resolveIncident"); err != nil {
+		return nil, err
+	}
 	return c.s.Call(ctx, "resolveIncident", slug, id)
 }
 
