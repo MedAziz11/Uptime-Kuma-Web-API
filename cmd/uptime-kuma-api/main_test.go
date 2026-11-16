@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -259,5 +260,42 @@ func TestAdminSetupFailureStops(t *testing.T) {
 	})
 	if code != exitFailed || !strings.Contains(stderr.String(), "set up the admin user: broken store") {
 		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+}
+
+func TestHealthcheck(t *testing.T) {
+	healthy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/health" {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer healthy.Close()
+	failing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer failing.Close()
+	closed := httptest.NewServer(http.NotFoundHandler())
+	closedAddr := closed.Listener.Addr().String()
+	closed.Close()
+	_, port, _ := net.SplitHostPort(healthy.Listener.Addr().String())
+
+	for _, tc := range []struct {
+		name   string
+		vars   map[string]string
+		status int
+	}{
+		{"healthy", map[string]string{"LISTEN_ADDR": healthy.Listener.Addr().String()}, exitOK},
+		{"unspecified host", map[string]string{"LISTEN_ADDR": ":" + port}, exitOK},
+		{"wildcard host", map[string]string{"LISTEN_ADDR": "0.0.0.0:" + port}, exitOK},
+		{"503", map[string]string{"LISTEN_ADDR": failing.Listener.Addr().String()}, exitFailed},
+		{"nothing listening", map[string]string{"LISTEN_ADDR": closedAddr}, exitFailed},
+		{"invalid LISTEN_ADDR", map[string]string{"LISTEN_ADDR": "8000"}, exitFailed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var stderr bytes.Buffer
+			if code := run(context.Background(), []string{"healthcheck"}, lookup(tc.vars), io.Discard, &stderr, hooks{}); code != tc.status {
+				t.Fatalf("exit %d, want %d: %s", code, tc.status, stderr.String())
+			}
+		})
 	}
 }

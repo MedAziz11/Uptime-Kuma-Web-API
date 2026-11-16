@@ -4,6 +4,9 @@
 // logs JSON lines to standard error. Exit status: 0 after a clean shutdown
 // (SIGTERM or SIGINT), 2 for a configuration error, 1 for any other
 // failure.
+//
+// `uptime-kuma-api healthcheck` checks a running server instead (the
+// container's HEALTHCHECK): exit status 0 when it is healthy, 1 otherwise.
 package main
 
 import (
@@ -19,6 +22,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/auth"
 	"github.com/MedAziz11/Uptime-Kuma-Web-API/v3/internal/config"
@@ -57,6 +61,9 @@ type hooks struct {
 
 // run is main without the process: it serves until ctx is done.
 func run(ctx context.Context, args []string, lookup config.LookupFunc, stdout, stderr io.Writer, h hooks) int {
+	if len(args) == 1 && args[0] == "healthcheck" {
+		return healthcheck(lookup, stderr)
+	}
 	flags := flag.NewFlagSet("uptime-kuma-api", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	showVersion := flags.Bool("version", false, "print the version and exit")
@@ -78,6 +85,37 @@ func run(ctx context.Context, args []string, lookup config.LookupFunc, stdout, s
 	log := slog.New(slog.NewJSONHandler(lw, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	if err := serve(ctx, cfg, log, h); err != nil {
 		log.Error("uptime-kuma-api failed: "+err.Error(), "version", version.Version)
+		return exitFailed
+	}
+	return exitOK
+}
+
+// healthcheck is the `healthcheck` subcommand, the image's HEALTHCHECK (the
+// image has no shell and no HTTP client): exit 0 if GET /health on the
+// server at LISTEN_ADDR answers 200 within 3 seconds, 1 otherwise. An
+// unspecified listen host (":8000", "0.0.0.0:8000") is reached on 127.0.0.1.
+func healthcheck(lookup config.LookupFunc, stderr io.Writer) int {
+	addr, ok := lookup("LISTEN_ADDR")
+	if !ok {
+		addr = config.DefaultListenAddr
+	}
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		fmt.Fprintln(stderr, "healthcheck: LISTEN_ADDR:", err)
+		return exitFailed
+	}
+	if ip := net.ParseIP(host); host == "" || (ip != nil && ip.IsUnspecified()) {
+		host = "127.0.0.1"
+	}
+	client := &http.Client{Timeout: 3 * time.Second}
+	res, err := client.Get("http://" + net.JoinHostPort(host, port) + "/health")
+	if err != nil {
+		fmt.Fprintln(stderr, "healthcheck:", err)
+		return exitFailed
+	}
+	_ = res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		fmt.Fprintln(stderr, "healthcheck: /health answered", res.Status)
 		return exitFailed
 	}
 	return exitOK
