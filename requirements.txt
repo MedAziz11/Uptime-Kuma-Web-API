@@ -1,8 +1,8 @@
-fastapi==0.162.5
+fastapi==0.163.1
 uvicorn[standard]==0.54.0
 pydantic==2.14.3
-pydantic-settings==2.16.2
-python-multipart==0.0.33
+pydantic-settings==2.16.3
+python-multipart==0.0.34
 uptime-kuma-api==1.2.1
 tortoise-orm==1.1.9
 bcrypt==5.0.0
