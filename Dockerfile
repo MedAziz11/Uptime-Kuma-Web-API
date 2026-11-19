@@ -1,5 +1,5 @@
 # Build stage: install dependencies into a virtual environment
-FROM python:3.13-alpine AS builder
+FROM python:3.15-alpine AS builder
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 # Runtime stage
-FROM python:3.13-alpine
+FROM python:3.15-alpine
 
 # Same user/group creation as the v1 image, so existing /db volumes keep their ownership.
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup -s /bin/sh && \
